@@ -1,5 +1,4 @@
 import Anthropic from '@anthropic-ai/sdk'
-import OpenAI from '@cherrystudio/openai'
 import { Assistant, MCPTool, MCPToolResponse, Model, ToolCallResponse } from '@renderer/types'
 import { Provider } from '@renderer/types'
 import {
@@ -14,6 +13,7 @@ import {
   SdkTool,
   SdkToolCall
 } from '@renderer/types/sdk'
+import OpenAI from 'openai'
 
 import { CompletionsParams, GenericChunk } from '../middleware/schemas'
 import { CompletionsContext } from '../middleware/types'

@@ -4,7 +4,7 @@ import {
   WebSearchPluginConfig
 } from '@cherrystudio/ai-core/core/plugins/built-in/webSearchPlugin/helper'
 import { BaseProviderId } from '@cherrystudio/ai-core/provider'
-import { isOpenAIDeepResearchModel, isOpenAIWebSearchChatCompletionOnlyModel } from '@renderer/config/models'
+import { isOpenAIWebSearchChatCompletionOnlyModel } from '@renderer/config/models'
 import { CherryWebSearchConfig } from '@renderer/store/websearch'
 import { Model } from '@renderer/types'
 import { mapRegexToPatterns } from '@renderer/utils/blacklistMatchPattern'
@@ -43,27 +43,20 @@ function mapMaxResultToOpenAIContextSize(maxResults: number): OpenAISearchConfig
 
 export function buildProviderBuiltinWebSearchConfig(
   providerId: BaseProviderId,
-  webSearchConfig: CherryWebSearchConfig,
-  model?: Model
+  webSearchConfig: CherryWebSearchConfig
 ): WebSearchPluginConfig | undefined {
   switch (providerId) {
     case 'openai': {
-      const searchContextSize = isOpenAIDeepResearchModel(model)
-        ? 'medium'
-        : mapMaxResultToOpenAIContextSize(webSearchConfig.maxResults)
       return {
         openai: {
-          searchContextSize
+          searchContextSize: mapMaxResultToOpenAIContextSize(webSearchConfig.maxResults)
         }
       }
     }
     case 'openai-chat': {
-      const searchContextSize = isOpenAIDeepResearchModel(model)
-        ? 'medium'
-        : mapMaxResultToOpenAIContextSize(webSearchConfig.maxResults)
       return {
         'openai-chat': {
-          searchContextSize
+          searchContextSize: mapMaxResultToOpenAIContextSize(webSearchConfig.maxResults)
         }
       }
     }
@@ -78,7 +71,6 @@ export function buildProviderBuiltinWebSearchConfig(
       }
     }
     case 'xai': {
-      const excludeDomains = mapRegexToPatterns(webSearchConfig.excludeDomains)
       return {
         xai: {
           maxSearchResults: webSearchConfig.maxResults,
@@ -86,7 +78,7 @@ export function buildProviderBuiltinWebSearchConfig(
           sources: [
             {
               type: 'web',
-              excludedWebsites: excludeDomains.slice(0, Math.min(excludeDomains.length, 5))
+              excludedWebsites: mapRegexToPatterns(webSearchConfig.excludeDomains)
             },
             { type: 'news' },
             { type: 'x' }

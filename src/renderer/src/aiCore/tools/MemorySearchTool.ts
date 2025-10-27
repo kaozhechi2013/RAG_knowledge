@@ -1,7 +1,7 @@
 import store from '@renderer/store'
 import { selectCurrentUserId, selectGlobalMemoryEnabled, selectMemoryConfig } from '@renderer/store/memory'
 import { type InferToolInput, type InferToolOutput, tool } from 'ai'
-import * as z from 'zod'
+import { z } from 'zod'
 
 import { MemoryProcessor } from '../../services/MemoryProcessor'
 

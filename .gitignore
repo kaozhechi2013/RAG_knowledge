@@ -19,6 +19,15 @@ lerna-debug.log*
 *.sln
 *.sw?
 
+*.docx
+*.pdf
+*.xlsx
+*.xls
+*.doc
+*.pptx
+*.ppt
+
+
 # Yarn
 .pnp.*
 .yarn/*
@@ -71,5 +80,3 @@ playwright-report
 test-results
 
 YOUR_MEMORY_FILE_PATH
-
-.sessions/

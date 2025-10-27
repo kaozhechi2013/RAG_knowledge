@@ -80,7 +80,6 @@ export default abstract class BaseReranker {
       message: error.message,
       status: error.response?.status,
       statusText: error.response?.statusText,
-      responseBody: error.response?.body, // Include the actual API error response
       requestBody: requestBody
     }
     return JSON.stringify(errorDetails, null, 2)

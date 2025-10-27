@@ -14,8 +14,8 @@ import i18n from '@renderer/i18n'
 import store from '@renderer/store'
 import { addAssistant } from '@renderer/store/assistants'
 import type {
+  Agent,
   Assistant,
-  AssistantPreset,
   AssistantSettings,
   Model,
   Provider,
@@ -133,8 +133,6 @@ export function getAssistantProvider(assistant: Assistant): Provider {
   return provider || getDefaultProvider()
 }
 
-// FIXME: This function fails in silence.
-// TODO: Refactor it to make it return exactly valid value or null, and update all usage.
 export function getProviderByModel(model?: Model): Provider {
   const providers = getStoreProviders()
   const provider = providers.find((p) => p.id === model?.provider)
@@ -147,7 +145,6 @@ export function getProviderByModel(model?: Model): Provider {
   return provider
 }
 
-// FIXME: This function may return undefined but as Provider
 export function getProviderByModelId(modelId?: string) {
   const providers = getStoreProviders()
   const _modelId = modelId || getDefaultModel().id
@@ -188,7 +185,7 @@ export function getAssistantById(id: string) {
   return assistants.find((a) => a.id === id)
 }
 
-export async function createAssistantFromAgent(agent: AssistantPreset) {
+export async function createAssistantFromAgent(agent: Agent) {
   const assistantId = uuid()
   const topic = getDefaultTopic(assistantId)
 

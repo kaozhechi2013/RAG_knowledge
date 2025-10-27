@@ -218,7 +218,7 @@ const InputbarTools = ({
         }
       },
       {
-        label: t('assistants.presets.edit.model.select.title'),
+        label: t('agents.edit.model.select.title'),
         description: '',
         icon: <AtSign />,
         isMenu: true,
@@ -383,9 +383,7 @@ const InputbarTools = ({
         key: 'url_context',
         label: t('chat.input.url_context'),
         component: <UrlContextButton ref={urlContextButtonRef} assistantId={assistant.id} />,
-        condition:
-          isGeminiModel(model) &&
-          (isSupportUrlContextProvider(getProviderByModel(model)) || model.endpoint_type === 'gemini')
+        condition: isGeminiModel(model) && isSupportUrlContextProvider(getProviderByModel(model))
       },
       {
         key: 'knowledge_base',
@@ -423,7 +421,7 @@ const InputbarTools = ({
       },
       {
         key: 'mention_models',
-        label: t('assistants.presets.edit.model.select.title'),
+        label: t('agents.edit.model.select.title'),
         component: (
           <MentionModelsButton
             ref={mentionModelsButtonRef}

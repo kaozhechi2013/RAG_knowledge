@@ -134,7 +134,7 @@ const MentionModelsButton: FC<Props> = ({
             ),
             description: <ModelTagsWithLabel model={m} showLabel={false} size={10} style={{ opacity: 0.8 }} />,
             icon: (
-              <Avatar src={getModelLogo(m)} size={20}>
+              <Avatar src={getModelLogo(m.id)} size={20}>
                 {first(m.name)}
               </Avatar>
             ),
@@ -170,7 +170,7 @@ const MentionModelsButton: FC<Props> = ({
         ),
         description: <ModelTagsWithLabel model={m} showLabel={false} size={10} style={{ opacity: 0.8 }} />,
         icon: (
-          <Avatar src={getModelLogo(m)} size={20}>
+          <Avatar src={getModelLogo(m.id)} size={20}>
             {first(m.name)}
           </Avatar>
         ),
@@ -238,7 +238,7 @@ const MentionModelsButton: FC<Props> = ({
       triggerInfoRef.current = triggerInfo
 
       quickPanel.open({
-        title: t('assistants.presets.edit.model.select.title'),
+        title: t('agents.edit.model.select.title'),
         list: modelItems,
         symbol: QuickPanelReservedSymbol.MentionModels,
         multiple: true,
@@ -302,7 +302,7 @@ const MentionModelsButton: FC<Props> = ({
   }))
 
   return (
-    <Tooltip placement="top" title={t('assistants.presets.edit.model.select.title')} mouseLeaveDelay={0} arrow>
+    <Tooltip placement="top" title={t('agents.edit.model.select.title')} mouseLeaveDelay={0} arrow>
       <ActionIconButton onClick={handleOpenQuickPanel} active={mentionedModels.length > 0}>
         <AtSign size={18} />
       </ActionIconButton>

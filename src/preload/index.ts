@@ -12,7 +12,6 @@ import {
   FileListResponse,
   FileMetadata,
   FileUploadResponse,
-  GetApiServerStatusResult,
   KnowledgeBaseParams,
   KnowledgeItem,
   KnowledgeSearchResult,
@@ -23,11 +22,8 @@ import {
   OcrProvider,
   OcrResult,
   Provider,
-  RestartApiServerStatusResult,
   S3Config,
   Shortcut,
-  StartApiServerStatusResult,
-  StopApiServerStatusResult,
   SupportedOcrFile,
   ThemeMode,
   WebDavConfig
@@ -172,8 +168,7 @@ const api = {
     openPath: (path: string) => ipcRenderer.invoke(IpcChannel.File_OpenPath, path),
     save: (path: string, content: string | NodeJS.ArrayBufferView, options?: any) =>
       ipcRenderer.invoke(IpcChannel.File_Save, path, content, options),
-    selectFolder: (options?: OpenDialogOptions): Promise<string | null> =>
-      ipcRenderer.invoke(IpcChannel.File_SelectFolder, options),
+    selectFolder: (options?: OpenDialogOptions) => ipcRenderer.invoke(IpcChannel.File_SelectFolder, options),
     saveImage: (name: string, data: string) => ipcRenderer.invoke(IpcChannel.File_SaveImage, name, data),
     binaryImage: (fileId: string) => ipcRenderer.invoke(IpcChannel.File_BinaryImage, fileId),
     base64Image: (fileId: string): Promise<{ mime: string; base64: string; data: string }> =>
@@ -204,8 +199,7 @@ const api = {
       }
       ipcRenderer.on('file-change', listener)
       return () => ipcRenderer.off('file-change', listener)
-    },
-    showInFolder: (path: string): Promise<void> => ipcRenderer.invoke(IpcChannel.File_ShowInFolder, path)
+    }
   },
   fs: {
     read: (pathOrUrl: string, encoding?: BufferEncoding) => ipcRenderer.invoke(IpcChannel.Fs_Read, pathOrUrl, encoding),
@@ -501,12 +495,6 @@ const api = {
         ipcRenderer.removeListener(channel, listener)
       }
     }
-  },
-  apiServer: {
-    getStatus: (): Promise<GetApiServerStatusResult> => ipcRenderer.invoke(IpcChannel.ApiServer_GetStatus),
-    start: (): Promise<StartApiServerStatusResult> => ipcRenderer.invoke(IpcChannel.ApiServer_Start),
-    restart: (): Promise<RestartApiServerStatusResult> => ipcRenderer.invoke(IpcChannel.ApiServer_Restart),
-    stop: (): Promise<StopApiServerStatusResult> => ipcRenderer.invoke(IpcChannel.ApiServer_Stop)
   }
 }
 

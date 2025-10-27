@@ -1,12 +1,11 @@
-import OpenAI from '@cherrystudio/openai'
-import { isEmbeddingModel, isRerankModel } from '@renderer/config/models/embedding'
 import { Model } from '@renderer/types'
 import { getLowerBaseModelName } from '@renderer/utils'
+import OpenAI from 'openai'
 
 import { WEB_SEARCH_PROMPT_FOR_OPENROUTER } from '../prompts'
 import { getWebSearchTools } from '../tools'
 import { isOpenAIReasoningModel } from './reasoning'
-import { isGenerateImageModel, isTextToImageModel, isVisionModel } from './vision'
+import { isGenerateImageModel, isVisionModel } from './vision'
 import { isOpenAIWebSearchChatCompletionOnlyModel } from './websearch'
 export const NOT_SUPPORTED_REGEX = /(?:^tts|whisper|speech)/i
 
@@ -247,7 +246,3 @@ export const isOpenAIOpenWeightModel = (model: Model) => {
 
 // zhipu 视觉推理模型用这组 special token 标记推理结果
 export const ZHIPU_RESULT_TOKENS = ['<|begin_of_box|>', '<|end_of_box|>'] as const
-
-export const agentModelFilter = (model: Model): boolean => {
-  return !isEmbeddingModel(model) && !isRerankModel(model) && !isTextToImageModel(model)
-}

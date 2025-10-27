@@ -1,7 +1,7 @@
 /**
  * AiHubMix规则集
  */
-import { isOpenAILLMModel } from '@renderer/config/models'
+import { isOpenAIModel } from '@renderer/config/models'
 import { Provider } from '@renderer/types'
 
 import { provider2Provider, startsWith } from './helper'
@@ -42,7 +42,7 @@ const AIHUBMIX_RULES: RuleSet = {
       }
     },
     {
-      match: isOpenAILLMModel,
+      match: isOpenAIModel,
       provider: (provider: Provider) => {
         return extraProviderConfig({
           ...provider,

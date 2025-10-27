@@ -158,7 +158,6 @@ export interface SettingsState {
   joplinUrl: string | null
   joplinExportReasoning: boolean
   defaultObsidianVault: string | null
-  /** This state is actaully default assistant preset */
   defaultAgent: string | null
   // 思源笔记配置
   siyuanApiUrl: string | null

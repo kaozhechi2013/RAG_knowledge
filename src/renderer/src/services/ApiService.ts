@@ -138,8 +138,7 @@ export async function fetchChatCompletion({
     enableGenerateImage: capabilities.enableGenerateImage,
     enableUrlContext: capabilities.enableUrlContext,
     mcpTools,
-    uiMessages,
-    knowledgeRecognition: assistant.knowledgeRecognition
+    uiMessages
   }
 
   // --- Call AI Completions ---

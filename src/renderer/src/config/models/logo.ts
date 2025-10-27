@@ -84,7 +84,6 @@ import JinaModelLogo from '@renderer/assets/images/models/jina.png'
 import JinaModelLogoDark from '@renderer/assets/images/models/jina_dark.png'
 import KeLingModelLogo from '@renderer/assets/images/models/keling.png'
 import KeLingModelLogoDark from '@renderer/assets/images/models/keling_dark.png'
-import LingModelLogo from '@renderer/assets/images/models/ling.png'
 import LlamaModelLogo from '@renderer/assets/images/models/llama.png'
 import LlamaModelLogoDark from '@renderer/assets/images/models/llama_dark.png'
 import LLavaModelLogo from '@renderer/assets/images/models/llava.png'
@@ -156,9 +155,8 @@ import ZhipuModelLogoDark from '@renderer/assets/images/models/zhipu_dark.png'
 import YoudaoLogo from '@renderer/assets/images/providers/netease-youdao.svg'
 import NomicLogo from '@renderer/assets/images/providers/nomic.png'
 import ZhipuProviderLogo from '@renderer/assets/images/providers/zhipu.png'
-import { Model } from '@renderer/types'
 
-export function getModelLogoById(modelId: string): string | undefined {
+export function getModelLogo(modelId: string) {
   const isLight = true
 
   if (!modelId) {
@@ -290,10 +288,8 @@ export function getModelLogoById(modelId: string): string | undefined {
     zhipu: isLight ? ZhipuModelLogo : ZhipuModelLogoDark,
     longcat: LongCatAppLogo,
     bytedance: BytedanceModelLogo,
-    ling: LingModelLogo,
-    ring: LingModelLogo,
     '(V_1|V_1_TURBO|V_2|V_2A|V_2_TURBO|DESCRIBE|UPSCALE)': IdeogramModelLogo
-  } as const satisfies Record<string, string>
+  } as const
 
   for (const key in logoMap) {
     const regex = new RegExp(key, 'i')
@@ -303,8 +299,4 @@ export function getModelLogoById(modelId: string): string | undefined {
   }
 
   return undefined
-}
-
-export function getModelLogo(model: Model | undefined | null): string | undefined {
-  return model ? (getModelLogoById(model.id) ?? getModelLogoById(model.name)) : undefined
 }

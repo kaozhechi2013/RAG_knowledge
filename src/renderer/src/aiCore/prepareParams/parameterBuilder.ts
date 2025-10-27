@@ -127,7 +127,7 @@ export async function buildStreamTextParams(
   let webSearchPluginConfig: WebSearchPluginConfig | undefined = undefined
   if (enableWebSearch) {
     if (isBaseProvider(aiSdkProviderId)) {
-      webSearchPluginConfig = buildProviderBuiltinWebSearchConfig(aiSdkProviderId, webSearchConfig, model)
+      webSearchPluginConfig = buildProviderBuiltinWebSearchConfig(aiSdkProviderId, webSearchConfig)
     }
     if (!tools) {
       tools = {}
@@ -160,7 +160,7 @@ export async function buildStreamTextParams(
     abortSignal: options.requestOptions?.signal,
     headers: options.requestOptions?.headers,
     providerOptions,
-    stopWhen: stepCountIs(20),
+    stopWhen: stepCountIs(10),
     maxRetries: 0
   }
   if (tools) {

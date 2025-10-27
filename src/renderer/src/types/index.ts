@@ -1,7 +1,7 @@
 import type { LanguageModelV2Source } from '@ai-sdk/provider'
 import type { WebSearchResultBlock } from '@anthropic-ai/sdk/resources'
-import type OpenAI from '@cherrystudio/openai'
 import type { GenerateImagesConfig, GroundingMetadata, PersonGeneration } from '@google/genai'
+import type OpenAI from 'openai'
 import type { CSSProperties } from 'react'
 
 export * from './file'
@@ -15,14 +15,10 @@ import { MCPConfigSample, McpServerType } from './mcp'
 import type { Message } from './newMessage'
 import type { BaseTool, MCPTool } from './tool'
 
-export * from './agent'
-export * from './apiModels'
-export * from './apiServer'
 export * from './knowledge'
 export * from './mcp'
 export * from './notification'
 export * from './ocr'
-export * from './provider'
 
 export type Assistant = {
   id: string
@@ -79,7 +75,6 @@ export type AssistantSettingCustomParameters = {
 const ThinkModelTypes = [
   'default',
   'o',
-  'openai_deep_research',
   'gpt5',
   'gpt5_codex',
   'grok',
@@ -90,7 +85,6 @@ const ThinkModelTypes = [
   'qwen_thinking',
   'doubao',
   'doubao_no_auto',
-  'doubao_after_251015',
   'hunyuan',
   'zhipu',
   'perplexity',
@@ -139,7 +133,7 @@ export type AssistantSettings = {
   toolUseMode: 'function' | 'prompt'
 }
 
-export type AssistantPreset = Omit<Assistant, 'model'> & {
+export type Agent = Omit<Assistant, 'model'> & {
   group?: string[]
 }
 
@@ -203,14 +197,8 @@ export type Metrics = {
   time_thinking_millsec?: number
 }
 
-export enum TopicType {
-  Chat = 'chat',
-  Session = 'session'
-}
-
 export type Topic = {
   id: string
-  type?: TopicType
   assistantId: string
   name: string
   createdAt: string
@@ -227,6 +215,162 @@ export type User = {
   avatar: string
   email: string
 }
+
+// undefined 视为支持，默认支持
+export type ProviderApiOptions = {
+  /** 是否不支持 message 的 content 为数组类型 */
+  isNotSupportArrayContent?: boolean
+  /** 是否不支持 stream_options 参数 */
+  isNotSupportStreamOptions?: boolean
+  /**
+   * @deprecated
+   * 是否不支持 message 的 role 为 developer */
+  isNotSupportDeveloperRole?: boolean
+  /* 是否支持 message 的 role 为 developer */
+  isSupportDeveloperRole?: boolean
+  /**
+   * @deprecated
+   * 是否不支持 service_tier 参数. Only for OpenAI Models. */
+  isNotSupportServiceTier?: boolean
+  /* 是否支持 service_tier 参数. Only for OpenAI Models. */
+  isSupportServiceTier?: boolean
+  /** 是否不支持 enable_thinking 参数 */
+  isNotSupportEnableThinking?: boolean
+}
+
+export type Provider = {
+  id: string
+  type: ProviderType
+  name: string
+  apiKey: string
+  apiHost: string
+  apiVersion?: string
+  models: Model[]
+  enabled?: boolean
+  isSystem?: boolean
+  isAuthed?: boolean
+  rateLimit?: number
+
+  // API options
+  apiOptions?: ProviderApiOptions
+  serviceTier?: ServiceTier
+
+  /** @deprecated */
+  isNotSupportArrayContent?: boolean
+  /** @deprecated */
+  isNotSupportStreamOptions?: boolean
+  /** @deprecated */
+  isNotSupportDeveloperRole?: boolean
+  /** @deprecated */
+  isNotSupportServiceTier?: boolean
+
+  authType?: 'apiKey' | 'oauth'
+  isVertex?: boolean
+  notes?: string
+  extra_headers?: Record<string, string>
+}
+
+export const SystemProviderIds = {
+  cherryin: 'cherryin',
+  silicon: 'silicon',
+  aihubmix: 'aihubmix',
+  ovms: 'ovms',
+  ocoolai: 'ocoolai',
+  deepseek: 'deepseek',
+  ppio: 'ppio',
+  alayanew: 'alayanew',
+  qiniu: 'qiniu',
+  dmxapi: 'dmxapi',
+  burncloud: 'burncloud',
+  tokenflux: 'tokenflux',
+  '302ai': '302ai',
+  cephalon: 'cephalon',
+  lanyun: 'lanyun',
+  ph8: 'ph8',
+  openrouter: 'openrouter',
+  ollama: 'ollama',
+  'new-api': 'new-api',
+  lmstudio: 'lmstudio',
+  anthropic: 'anthropic',
+  openai: 'openai',
+  'azure-openai': 'azure-openai',
+  gemini: 'gemini',
+  vertexai: 'vertexai',
+  github: 'github',
+  copilot: 'copilot',
+  zhipu: 'zhipu',
+  yi: 'yi',
+  moonshot: 'moonshot',
+  baichuan: 'baichuan',
+  dashscope: 'dashscope',
+  stepfun: 'stepfun',
+  doubao: 'doubao',
+  infini: 'infini',
+  minimax: 'minimax',
+  groq: 'groq',
+  together: 'together',
+  fireworks: 'fireworks',
+  nvidia: 'nvidia',
+  grok: 'grok',
+  hyperbolic: 'hyperbolic',
+  mistral: 'mistral',
+  jina: 'jina',
+  perplexity: 'perplexity',
+  modelscope: 'modelscope',
+  xirang: 'xirang',
+  hunyuan: 'hunyuan',
+  'tencent-cloud-ti': 'tencent-cloud-ti',
+  'baidu-cloud': 'baidu-cloud',
+  gpustack: 'gpustack',
+  voyageai: 'voyageai',
+  'aws-bedrock': 'aws-bedrock',
+  poe: 'poe',
+  aionly: 'aionly',
+  longcat: 'longcat'
+} as const
+
+export type SystemProviderId = keyof typeof SystemProviderIds
+
+export const isSystemProviderId = (id: string): id is SystemProviderId => {
+  return Object.hasOwn(SystemProviderIds, id)
+}
+
+export type SystemProvider = Provider & {
+  id: SystemProviderId
+  isSystem: true
+  apiOptions?: never
+}
+
+export type VertexProvider = Provider & {
+  googleCredentials: {
+    privateKey: string
+    clientEmail: string
+  }
+  project: string
+  location: string
+}
+
+/**
+ * 判断是否为系统内置的提供商。比直接使用`provider.isSystem`更好，因为该数据字段不会随着版本更新而变化。
+ * @param provider - Provider对象，包含提供商的信息
+ * @returns 是否为系统内置提供商
+ */
+export const isSystemProvider = (provider: Provider): provider is SystemProvider => {
+  return isSystemProviderId(provider.id) && !!provider.isSystem
+}
+
+export type ProviderType =
+  | 'openai'
+  | 'openai-response'
+  | 'anthropic'
+  | 'gemini'
+  | 'qwenlm'
+  | 'azure-openai'
+  | 'vertexai'
+  | 'mistral'
+  | 'aws-bedrock'
+  | 'vertex-anthropic'
+  | 'new-api'
 
 export type ModelType = 'text' | 'vision' | 'embedding' | 'reasoning' | 'function_calling' | 'web_search' | 'rerank'
 
@@ -279,7 +423,7 @@ export type PaintingParams = {
   providerId?: string
 }
 
-export type PaintingProvider = 'zhipu' | 'aihubmix' | 'silicon' | 'dmxapi' | 'new-api' | 'ovms'
+export type PaintingProvider = 'zhipu' | 'aihubmix' | 'silicon' | 'dmxapi' | 'new-api'
 
 export interface Painting extends PaintingParams {
   model?: string
@@ -379,18 +523,8 @@ export interface TokenFluxPainting extends PaintingParams {
   status?: 'starting' | 'processing' | 'succeeded' | 'failed' | 'cancelled'
 }
 
-export interface OvmsPainting extends PaintingParams {
-  model?: string
-  prompt?: string
-  size?: string
-  num_inference_steps?: number
-  rng_seed?: number
-  safety_check?: boolean
-  response_format?: 'url' | 'b64_json'
-}
-
 export type PaintingAction = Partial<
-  GeneratePainting & RemixPainting & EditPainting & ScalePainting & DmxapiPainting & TokenFluxPainting & OvmsPainting
+  GeneratePainting & RemixPainting & EditPainting & ScalePainting & DmxapiPainting & TokenFluxPainting
 > &
   PaintingParams
 
@@ -411,8 +545,6 @@ export interface PaintingsState {
   // OpenAI
   openai_image_generate: Partial<GeneratePainting> & PaintingParams[]
   openai_image_edit: Partial<EditPainting> & PaintingParams[]
-  // OVMS
-  ovms_paintings: OvmsPainting[]
 }
 
 export type MinAppType = {
@@ -434,17 +566,7 @@ export enum ThemeMode {
 }
 
 /** 有限的UI语言 */
-export type LanguageVarious =
-  | 'zh-CN'
-  | 'zh-TW'
-  | 'de-DE'
-  | 'el-GR'
-  | 'en-US'
-  | 'es-ES'
-  | 'fr-FR'
-  | 'ja-JP'
-  | 'pt-PT'
-  | 'ru-RU'
+export type LanguageVarious = 'zh-CN' | 'zh-TW' | 'el-GR' | 'en-US' | 'es-ES' | 'fr-FR' | 'ja-JP' | 'pt-PT' | 'ru-RU'
 
 export type CodeStyleVarious = 'auto' | string
 
@@ -554,7 +676,7 @@ export const isAutoDetectionMethod = (method: string): method is AutoDetectionMe
 
 export type SidebarIcon =
   | 'assistants'
-  | 'store'
+  | 'agents'
   | 'paintings'
   | 'translate'
   | 'minapp'
@@ -766,7 +888,7 @@ export type MCPToolResponseStatus = 'pending' | 'cancelled' | 'invoking' | 'done
 interface BaseToolResponse {
   id: string // unique id
   tool: BaseTool | MCPTool
-  arguments: Record<string, unknown> | Record<string, unknown>[] | string | undefined
+  arguments: Record<string, unknown> | undefined
   status: MCPToolResponseStatus
   response?: any
 }
@@ -861,6 +983,39 @@ export type OpenAIVerbosity = 'high' | 'medium' | 'low'
 
 export type OpenAISummaryText = 'auto' | 'concise' | 'detailed' | 'off'
 
+export const OpenAIServiceTiers = {
+  auto: 'auto',
+  default: 'default',
+  flex: 'flex',
+  priority: 'priority'
+} as const
+
+export type OpenAIServiceTier = keyof typeof OpenAIServiceTiers
+
+export function isOpenAIServiceTier(tier: string): tier is OpenAIServiceTier {
+  return Object.hasOwn(OpenAIServiceTiers, tier)
+}
+
+export const GroqServiceTiers = {
+  auto: 'auto',
+  on_demand: 'on_demand',
+  flex: 'flex',
+  performance: 'performance'
+} as const
+
+// 从 GroqServiceTiers 对象中提取类型
+export type GroqServiceTier = keyof typeof GroqServiceTiers
+
+export function isGroqServiceTier(tier: string): tier is GroqServiceTier {
+  return Object.hasOwn(GroqServiceTiers, tier)
+}
+
+export type ServiceTier = OpenAIServiceTier | GroqServiceTier
+
+export function isServiceTier(tier: string): tier is ServiceTier {
+  return isGroqServiceTier(tier) || isOpenAIServiceTier(tier)
+}
+
 export type S3Config = {
   endpoint: string
   region: string
@@ -876,6 +1031,13 @@ export type S3Config = {
 }
 
 export type { Message } from './newMessage'
+
+export interface ApiServerConfig {
+  enabled: boolean
+  host: string
+  port: number
+  apiKey: string
+}
 export * from './tool'
 
 // Memory Service Types

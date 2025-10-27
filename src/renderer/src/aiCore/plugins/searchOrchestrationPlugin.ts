@@ -239,6 +239,38 @@ export const searchOrchestrationPlugin = (assistant: Assistant, topicId: string)
   // 存储意图分析结果
   const intentAnalysisResults: { [requestId: string]: ExtractResults } = {}
   const userMessages: { [requestId: string]: ModelMessage } = {}
+  let intentAnalyzerWarmedUp = false
+  let intentAnalyzerWarmupPromise: Promise<void> | null = null
+  const intentWarmupPrompt = 'Warm up for search intent analysis. Reply with "OK".'
+
+  const warmupIntentAnalyzer = async (context: AiRequestContext) => {
+    if (intentAnalyzerWarmedUp || !context.model) {
+      return
+    }
+
+    if (!intentAnalyzerWarmupPromise) {
+      intentAnalyzerWarmupPromise = generateText({
+        model: context.model as LanguageModel,
+        prompt: intentWarmupPrompt
+      })
+        .then(() => {
+          intentAnalyzerWarmedUp = true
+        })
+        .catch((error) => {
+          logger.warn('🧠 Intent analysis warmup failed:', error as Error)
+        })
+        .finally(() => {
+          intentAnalyzerWarmupPromise = null
+        })
+    }
+
+    try {
+      await intentAnalyzerWarmupPromise
+    } catch {
+      // ignore warmup failures; main flow will fallback if needed
+    }
+  }
+
 
   return definePlugin({
     name: 'search-orchestration',
@@ -273,6 +305,16 @@ export const searchOrchestrationPlugin = (assistant: Assistant, topicId: string)
 
         // 执行意图分析
         if (shouldWebSearch || hasKnowledgeBase) {
+          await warmupIntentAnalyzer(context)
+
+          logger.info('🧠 Starting intent analysis...', {
+            requestId: context.requestId,
+            shouldWebSearch,
+            shouldKnowledgeSearch,
+            hasKnowledgeBase,
+            knowledgeBaseIds
+          })
+
           const analysisResult = await analyzeSearchIntent(lastUserMessage, assistant, {
             shouldWebSearch,
             shouldKnowledgeSearch,
@@ -284,7 +326,14 @@ export const searchOrchestrationPlugin = (assistant: Assistant, topicId: string)
 
           if (analysisResult) {
             intentAnalysisResults[context.requestId] = analysisResult
-            // logger.info('🧠 Intent analysis completed:', analysisResult)
+            logger.info('🧠 Intent analysis completed:', {
+              requestId: context.requestId,
+              analysisResult
+            })
+          } else {
+            logger.warn('🧠 Intent analysis returned undefined', {
+              requestId: context.requestId
+            })
           }
         }
       } catch (error) {
@@ -297,7 +346,11 @@ export const searchOrchestrationPlugin = (assistant: Assistant, topicId: string)
      * 🔧 Step 2: 工具配置阶段
      */
     transformParams: async (params: any, context: AiRequestContext) => {
-      // logger.info('🔧 Configuring tools based on intent...', context.requestId)
+      logger.info('🔧 Configuring tools based on intent...', {
+        requestId: context.requestId,
+        hasAnalysisResult: !!intentAnalysisResults[context.requestId],
+        analysisResult: intentAnalysisResults[context.requestId]
+      })
 
       try {
         const analysisResult = intentAnalysisResults[context.requestId]
@@ -343,8 +396,8 @@ export const searchOrchestrationPlugin = (assistant: Assistant, topicId: string)
             params.tools['builtin_knowledge_search'] = knowledgeSearchTool(
               assistant,
               fallbackKeywords,
-              getMessageContent(userMessage),
-              topicId
+              topicId,
+              getMessageContent(userMessage)
             )
             // params.toolChoice = { type: 'tool', toolName: 'builtin_knowledge_search' }
           } else {
@@ -354,15 +407,32 @@ export const searchOrchestrationPlugin = (assistant: Assistant, topicId: string)
               analysisResult.knowledge.question &&
               analysisResult.knowledge.question[0] !== 'not_needed'
 
+            logger.info('📚 Knowledge search decision:', {
+              requestId: context.requestId,
+              hasAnalysisResult: !!analysisResult,
+              hasKnowledge: !!analysisResult?.knowledge,
+              question: analysisResult?.knowledge?.question,
+              needsKnowledgeSearch,
+              knowledgeBaseIds: assistant.knowledge_bases?.map(b => b.id)
+            })
+
             if (needsKnowledgeSearch && analysisResult.knowledge) {
-              // logger.info('📚 Adding knowledge search tool (intent-based)')
+              logger.info('📚 Adding knowledge search tool (intent-based)')
               const userMessage = userMessages[context.requestId]
               params.tools['builtin_knowledge_search'] = knowledgeSearchTool(
                 assistant,
                 analysisResult.knowledge,
-                getMessageContent(userMessage),
-                topicId
+                topicId,
+                getMessageContent(userMessage)
               )
+            } else {
+              logger.warn('📚 Knowledge search tool NOT added', {
+                reason: !analysisResult ? 'no analysisResult' :
+                        !analysisResult.knowledge ? 'no knowledge in analysisResult' :
+                        !analysisResult.knowledge.question ? 'no question in knowledge' :
+                        analysisResult.knowledge.question[0] === 'not_needed' ? 'question is not_needed' :
+                        'unknown reason'
+              })
             }
           }
         }

@@ -8,7 +8,6 @@ import enUS from './locales/en-us.json'
 import zhCN from './locales/zh-cn.json'
 import zhTW from './locales/zh-tw.json'
 // Machine translation
-import deDE from './translate/de-de.json'
 import elGR from './translate/el-gr.json'
 import esES from './translate/es-es.json'
 import frFR from './translate/fr-fr.json'
@@ -25,7 +24,6 @@ const resources = Object.fromEntries(
     ['ru-RU', ruRU],
     ['zh-CN', zhCN],
     ['zh-TW', zhTW],
-    ['de-DE', deDE],
     ['el-GR', elGR],
     ['es-ES', esES],
     ['fr-FR', frFR],

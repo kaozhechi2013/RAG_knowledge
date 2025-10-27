@@ -92,10 +92,6 @@ export enum IpcChannel {
   // Python
   Python_Execute = 'python:execute',
 
-  // agent messages
-  AgentMessage_PersistExchange = 'agent-message:persist-exchange',
-  AgentMessage_GetHistory = 'agent-message:get-history',
-
   //copilot
   Copilot_GetAuthMessage = 'copilot:get-auth-message',
   Copilot_GetCopilotToken = 'copilot:get-copilot-token',
@@ -138,7 +134,6 @@ export enum IpcChannel {
   Windows_Close = 'window:close',
   Windows_IsMaximized = 'window:is-maximized',
   Windows_MaximizedChanged = 'window:maximized-changed',
-  Windows_NavigateToAbout = 'window:navigate-to-about',
 
   KnowledgeBase_Create = 'knowledge-base:create',
   KnowledgeBase_Reset = 'knowledge-base:reset',
@@ -190,7 +185,6 @@ export enum IpcChannel {
   File_ValidateNotesDirectory = 'file:validateNotesDirectory',
   File_StartWatcher = 'file:startWatcher',
   File_StopWatcher = 'file:stopWatcher',
-  File_ShowInFolder = 'file:showInFolder',
 
   // file service
   FileService_Upload = 'file-service:upload',
@@ -318,7 +312,6 @@ export enum IpcChannel {
   ApiServer_Stop = 'api-server:stop',
   ApiServer_Restart = 'api-server:restart',
   ApiServer_GetStatus = 'api-server:get-status',
-  // NOTE: This api is not be used.
   ApiServer_GetConfig = 'api-server:get-config',
 
   // Anthropic OAuth

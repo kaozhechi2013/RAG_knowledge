@@ -1,4 +1,4 @@
-import * as z from 'zod'
+import { z } from 'zod'
 
 // Define Zod schema for fact retrieval output
 export const FactRetrievalSchema = z.object({

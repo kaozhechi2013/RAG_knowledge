@@ -4,9 +4,6 @@ import type { MCPTool, Message, Model, Provider } from '@renderer/types'
 import type { Chunk } from '@renderer/types/chunk'
 import { extractReasoningMiddleware, LanguageModelMiddleware, simulateStreamingMiddleware } from 'ai'
 
-import { noThinkMiddleware } from './noThinkMiddleware'
-import { toolChoiceMiddleware } from './toolChoiceMiddleware'
-
 const logger = loggerService.withContext('AiSdkMiddlewareBuilder')
 
 /**
@@ -32,8 +29,6 @@ export interface AiSdkMiddlewareConfig {
   uiMessages?: Message[]
   // 内置搜索配置
   webSearchPluginConfig?: WebSearchPluginConfig
-  // 知识库识别开关，默认开启
-  knowledgeRecognition?: 'off' | 'on'
 }
 
 /**
@@ -124,15 +119,6 @@ export class AiSdkMiddlewareBuilder {
 export function buildAiSdkMiddlewares(config: AiSdkMiddlewareConfig): LanguageModelMiddleware[] {
   const builder = new AiSdkMiddlewareBuilder()
 
-  // 0. 知识库强制调用中间件（必须在最前面，确保第一轮强制调用知识库）
-  if (config.knowledgeRecognition === 'off') {
-    builder.add({
-      name: 'force-knowledge-first',
-      middleware: toolChoiceMiddleware('builtin_knowledge_search')
-    })
-    logger.debug('Added toolChoice middleware to force knowledge base search on first round')
-  }
-
   // 1. 根据provider添加特定中间件
   if (config.provider) {
     addProviderSpecificMiddlewares(builder, config)
@@ -199,14 +185,6 @@ function addProviderSpecificMiddlewares(builder: AiSdkMiddlewareBuilder, config:
     default:
       // 其他provider的通用处理
       break
-  }
-
-  // OVMS+MCP's specific middleware
-  if (config.provider.id === 'ovms' && config.mcpTools && config.mcpTools.length > 0) {
-    builder.add({
-      name: 'no-think',
-      middleware: noThinkMiddleware()
-    })
   }
 }
 

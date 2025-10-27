@@ -1,21 +1,15 @@
-import { Alert, Skeleton } from '@heroui/react'
 import AddAssistantPopup from '@renderer/components/Popups/AddAssistantPopup'
-import { useActiveSession } from '@renderer/hooks/agents/useActiveSession'
-import { useUpdateSession } from '@renderer/hooks/agents/useUpdateSession'
 import { useAssistants, useDefaultAssistant } from '@renderer/hooks/useAssistant'
-import { useRuntime } from '@renderer/hooks/useRuntime'
 import { useNavbarPosition, useSettings } from '@renderer/hooks/useSettings'
 import { useShowTopics } from '@renderer/hooks/useStore'
 import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
 import { Assistant, Topic } from '@renderer/types'
-import { Tab } from '@renderer/types/chat'
-import { classNames, getErrorMessage, uuid } from '@renderer/utils'
+import { classNames, uuid } from '@renderer/utils'
 import { FC, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
 
 import Assistants from './AssistantsTab'
-import SessionSettingsTab from './SessionSettingsTab'
 import Settings from './SettingsTab'
 import Topics from './TopicsTab'
 
@@ -29,7 +23,9 @@ interface Props {
   style?: React.CSSProperties
 }
 
-let _tab: Tab | null = null
+type Tab = 'assistants' | 'topic' | 'settings'
+
+let _tab: any = ''
 
 const HomeTabs: FC<Props> = ({
   activeAssistant,
@@ -41,20 +37,14 @@ const HomeTabs: FC<Props> = ({
   style
 }) => {
   const { addAssistant } = useAssistants()
+  const [tab, setTab] = useState<Tab>(position === 'left' ? _tab || 'assistants' : 'topic')
   const { topicPosition } = useSettings()
   const { defaultAssistant } = useDefaultAssistant()
   const { toggleShowTopics } = useShowTopics()
   const { isLeftNavbar } = useNavbarPosition()
+
   const { t } = useTranslation()
-  const { chat } = useRuntime()
-  const { activeTopicOrSession, activeAgentId } = chat
-  const { session, isLoading: isSessionLoading, error: sessionError } = useActiveSession()
-  const { updateSession } = useUpdateSession(activeAgentId)
 
-  const isSessionView = activeTopicOrSession === 'session'
-  const isTopicView = activeTopicOrSession === 'topic'
-
-  const [tab, setTab] = useState<Tab>(position === 'left' ? _tab || 'assistants' : 'topic')
   const borderStyle = '0.5px solid var(--color-border)'
   const border =
     position === 'left'
@@ -97,13 +87,13 @@ const HomeTabs: FC<Props> = ({
       })
     ]
     return () => unsubscribes.forEach((unsub) => unsub())
-  }, [position, setTab, showTab, tab, toggleShowTopics, topicPosition])
+  }, [position, showTab, tab, toggleShowTopics, topicPosition])
 
   useEffect(() => {
     if (position === 'right' && topicPosition === 'right' && tab === 'assistants') {
       setTab('topic')
     }
-    if (position === 'left' && topicPosition === 'right' && (tab === 'topic' || tab === 'settings')) {
+    if (position === 'left' && topicPosition === 'right' && tab === 'topic') {
       setTab('assistants')
     }
   }, [position, tab, topicPosition, forceToSeeAllTab])
@@ -154,21 +144,7 @@ const HomeTabs: FC<Props> = ({
             position={position}
           />
         )}
-        {tab === 'settings' && isTopicView && <Settings assistant={activeAssistant} />}
-        {tab === 'settings' && isSessionView && !sessionError && (
-          <Skeleton isLoaded={!isSessionLoading} className="h-full">
-            <SessionSettingsTab session={session} update={updateSession} />
-          </Skeleton>
-        )}
-        {tab === 'settings' && isSessionView && sessionError && (
-          <div className="w-[var(--assistants-width)] p-2 px-3 pt-4">
-            <Alert
-              color="danger"
-              title={t('agent.session.get.error.failed')}
-              description={getErrorMessage(sessionError)}
-            />
-          </div>
-        )}
+        {tab === 'settings' && <Settings assistant={activeAssistant} />}
       </TabContent>
     </Container>
   )
@@ -189,7 +165,10 @@ const Container = styled.div`
     background-color: var(--color-background);
   }
   [navbar-position='top'] & {
-    height: calc(100vh - var(--navbar-height));
+    height: calc(100vh - var(--navbar-height) - 12px);
+    &.right {
+      height: calc(100vh - var(--navbar-height) - var(--navbar-height) - 12px);
+    }
   }
   overflow: hidden;
   .collapsed {
@@ -221,7 +200,7 @@ const CustomTabs = styled.div`
 
 const TabItem = styled.button<{ active: boolean }>`
   flex: 1;
-  height: 30px;
+  height: 32px;
   border: none;
   background: transparent;
   color: ${(props) => (props.active ? 'var(--color-text)' : 'var(--color-text-secondary)')};
@@ -246,7 +225,7 @@ const TabItem = styled.button<{ active: boolean }>`
   &::after {
     content: '';
     position: absolute;
-    bottom: -8px;
+    bottom: -9px;
     left: 50%;
     transform: translateX(-50%);
     width: ${(props) => (props.active ? '30px' : '0')};
