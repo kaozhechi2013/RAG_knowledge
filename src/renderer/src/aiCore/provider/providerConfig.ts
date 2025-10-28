@@ -140,7 +140,7 @@ export function providerToAiSdkConfig(
       extraOptions.headers = {
         ...extraOptions.headers,
         'HTTP-Referer': 'https://cherry-ai.com',
-        'X-Title': 'Cherry Studio',
+        'X-Title': 'Knowledge',
         'X-Api-Key': baseConfig.apiKey
       }
     }

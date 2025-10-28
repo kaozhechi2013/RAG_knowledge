@@ -3,7 +3,7 @@ import './ThemeService'
 
 import { is } from '@electron-toolkit/utils'
 import { loggerService } from '@logger'
-import { isDev, isLinux, isMac, isWin } from '@main/constant'
+import { isDev, isWin } from '@main/constant'
 import { getFilesDir } from '@main/utils/file'
 import { MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH } from '@shared/config/constant'
 import { IpcChannel } from '@shared/IpcChannel'
@@ -11,8 +11,6 @@ import { app, BrowserWindow, nativeTheme, screen, shell } from 'electron'
 import windowStateKeeper from 'electron-window-state'
 import { join } from 'path'
 
-import icon from '../../../build/icon.png?asset'
-import { titleBarOverlayDark, titleBarOverlayLight } from '../config'
 import { configManager } from './ConfigManager'
 import { contextMenu } from './ContextMenu'
 import { initSessionUserAgent } from './WebviewService'
@@ -28,9 +26,6 @@ export class WindowService {
   private mainWindow: BrowserWindow | null = null
   private miniWindow: BrowserWindow | null = null
   private isPinnedMiniWindow: boolean = false
-  //hacky-fix: store the focused status of mainWindow before miniWindow shows
-  //to restore the focus status when miniWindow hides
-  private wasMainWindowFocused: boolean = false
   private lastRendererProcessCrashTime: number = 0
 
   public static getInstance(): WindowService {
@@ -66,20 +61,9 @@ export class WindowService {
       transparent: false,
       vibrancy: 'sidebar',
       visualEffectState: 'active',
-      // For Windows and Linux, we use frameless window with custom controls
-      // For Mac, we keep the native title bar style
-      ...(isMac
-        ? {
-            titleBarStyle: 'hidden',
-            titleBarOverlay: nativeTheme.shouldUseDarkColors ? titleBarOverlayDark : titleBarOverlayLight,
-            trafficLightPosition: { x: 8, y: 13 }
-          }
-        : {
-            frame: false // Frameless window for Windows and Linux
-          }),
-      backgroundColor: isMac ? undefined : nativeTheme.shouldUseDarkColors ? '#181818' : '#FFFFFF',
+      frame: false, // Frameless window for Windows
+      backgroundColor: nativeTheme.shouldUseDarkColors ? '#181818' : '#FFFFFF',
       darkTheme: nativeTheme.shouldUseDarkColors,
-      ...(isLinux ? { icon } : {}),
       webPreferences: {
         preload: join(__dirname, '../preload/index.js'),
         sandbox: false,
@@ -212,16 +196,6 @@ export class WindowService {
     mainWindow.on('restore', () => {
       mainWindow.webContents.setZoomFactor(configManager.getZoomFactor())
     })
-
-    // ARCH: as `will-resize` is only for Win & Mac,
-    // linux has the same problem, use `resize` listener instead
-    // but `resize` will fliker the ui
-    if (isLinux) {
-      mainWindow.on('resize', () => {
-        mainWindow.webContents.setZoomFactor(configManager.getZoomFactor())
-        mainWindow.webContents.send(IpcChannel.Windows_Resize, mainWindow.getSize())
-      })
-    }
 
     mainWindow.on('unmaximize', () => {
       mainWindow.webContents.send(IpcChannel.Windows_Resize, mainWindow.getSize())
@@ -356,17 +330,14 @@ export class WindowService {
 
       // 没有开启托盘，或者开启了托盘，但设置了直接关闭，应执行直接退出
       if (!isShowTray || (isShowTray && !isTrayOnClose)) {
-        // 如果是Windows或Linux，直接退出
-        // mac按照系统默认行为，不退出
-        if (isWin || isLinux) {
+        // Windows 直接退出
+        if (isWin) {
           return app.quit()
         }
       }
 
       /**
-       * 上述逻辑以下:
-       * win/linux: 是"开启托盘+设置关闭时最小化到托盘"的情况
-       * mac: 任何情况都会到这里，因此需要单独处理mac
+       * Windows: 是"开启托盘+设置关闭时最小化到托盘"的情况
        */
 
       if (!mainWindow.isFullScreen()) {
@@ -374,14 +345,6 @@ export class WindowService {
       }
 
       mainWindow.hide()
-
-      // TODO: don't hide dock icon when close to tray
-      // will cause the cmd+h behavior not working
-      // after the electron fix the bug, we can restore this code
-      // //for mac users, should hide dock icon if close to tray
-      // if (isMac && isTrayOnClose) {
-      //   app.dock?.hide()
-      // }
     })
 
     mainWindow.on('closed', () => {
@@ -411,22 +374,17 @@ export class WindowService {
        *
        * [macOS] Known Issue
        *  setVisibleOnAllWorkspaces true/false will NOT bring window to current desktop in Mac (works fine with Windows)
-       *  AppleScript may be a solution, but it's not worth
-       *
-       * [Linux] Known Issue
-       *  setVisibleOnAllWorkspaces 在 Linux 环境下（特别是 KDE Wayland）会导致窗口进入"假弹出"状态
-       *  因此在 Linux 环境下不执行这两行代码
+       * Windows always make the window focused, regardless of `setVisibleOnAllWorkspaces`.
+       *  So we can't just focus the main window by setting it to TRUE to all workspaces.
+       *  IDEA: AppleScript may be a solution, but it's not worth
        */
-      if (!isLinux) {
-        this.mainWindow.setVisibleOnAllWorkspaces(true)
-      }
+      this.mainWindow.setVisibleOnAllWorkspaces(true)
 
       /**
-       * [macOS] After being closed in fullscreen, the fullscreen behavior will become strange when window shows again
+       * After being closed in fullscreen, the fullscreen behavior will become strange when window shows again
        * So we need to set it to FALSE explicitly.
-       * althougle other platforms don't have the issue, but it's a good practice to do so
        *
-       *  Check if window is visible to prevent interrupting fullscreen state when clicking dock icon
+       * Check if window is visible to prevent interrupting fullscreen state when clicking dock icon
        */
       if (this.mainWindow.isFullScreen() && !this.mainWindow.isVisible()) {
         this.mainWindow.setFullScreen(false)
@@ -434,9 +392,7 @@ export class WindowService {
 
       this.mainWindow.show()
       this.mainWindow.focus()
-      if (!isLinux) {
-        this.mainWindow.setVisibleOnAllWorkspaces(false)
-      }
+      this.mainWindow.setVisibleOnAllWorkspaces(false)
     } else {
       this.mainWindow = this.createMainWindow()
     }
@@ -488,13 +444,12 @@ export class WindowService {
       maxHeight: 768,
       show: false,
       autoHideMenuBar: true,
-      transparent: isMac,
+      transparent: false,
       vibrancy: 'under-window',
       visualEffectState: 'followWindow',
       frame: false,
       alwaysOnTop: true,
       useContentSize: true,
-      ...(isMac ? { type: 'panel' } : {}),
       skipTaskbar: true,
       resizable: true,
       minimizable: false,
@@ -523,7 +478,6 @@ export class WindowService {
         return
       }
 
-      this.wasMainWindowFocused = this.mainWindow?.isFocused() || false
       this.miniWindow?.center()
       this.miniWindow?.show()
     })
@@ -563,8 +517,6 @@ export class WindowService {
     }
 
     if (this.miniWindow && !this.miniWindow.isDestroyed()) {
-      this.wasMainWindowFocused = this.mainWindow?.isFocused() || false
-
       // [Windows] hacky fix
       // the window is minimized only when in Windows platform
       // because it's a workaround for Windows, see `hideMiniWindow()`
@@ -623,18 +575,12 @@ export class WindowService {
       return
     }
 
-    //[macOs/Windows] hacky fix
+    // Windows: hacky fix
     // previous window(not self-app) should be focused again after miniWindow hide
     // this workaround is to make previous window focused again after miniWindow hide
     if (isWin) {
       this.miniWindow.setOpacity(0) // don't show the minimizing animation
       this.miniWindow.minimize()
-      return
-    } else if (isMac) {
-      this.miniWindow.hide()
-      if (!this.wasMainWindowFocused) {
-        app.hide()
-      }
       return
     }
 

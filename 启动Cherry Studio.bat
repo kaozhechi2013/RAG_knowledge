@@ -3,7 +3,7 @@ chcp 65001 >nul
 cd /d "%~dp0"
 
 echo ========================================
-echo   🍒 Cherry Studio 开发服务器
+echo   🍒 Knowledge 开发服务器
 echo ========================================
 echo.
 echo 📍 项目位置: %CD%

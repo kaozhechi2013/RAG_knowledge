@@ -1,10 +1,8 @@
-import { isLinux, isMac, isWin } from '@main/constant'
+import { isWin } from '@main/constant'
 import { locales } from '@main/utils/locales'
-import { app, Menu, MenuItemConstructorOptions, nativeImage, nativeTheme, Tray } from 'electron'
+import { app, Menu, MenuItemConstructorOptions, Tray } from 'electron'
 
 import icon from '../../../build/tray_icon.png?asset'
-import iconDark from '../../../build/tray_icon_dark.png?asset'
-import iconLight from '../../../build/tray_icon_light.png?asset'
 import { ConfigKeys, configManager } from './ConfigManager'
 import selectionService from './SelectionService'
 import { windowService } from './WindowService'
@@ -27,31 +25,14 @@ export class TrayService {
   private createTray() {
     this.destroyTray()
 
-    const iconPath = isMac ? (nativeTheme.shouldUseDarkColors ? iconLight : iconDark) : icon
-    const tray = new Tray(iconPath)
-
-    if (isWin) {
-      tray.setImage(iconPath)
-    } else if (isMac) {
-      const image = nativeImage.createFromPath(iconPath)
-      const resizedImage = image.resize({ width: 16, height: 16 })
-      resizedImage.setTemplateImage(true)
-      tray.setImage(resizedImage)
-    } else if (isLinux) {
-      const image = nativeImage.createFromPath(iconPath)
-      const resizedImage = image.resize({ width: 16, height: 16 })
-      tray.setImage(resizedImage)
-    }
+    const tray = new Tray(icon)
+    tray.setImage(icon)
 
     this.tray = tray
 
     this.updateContextMenu()
 
-    if (isLinux) {
-      this.tray.setContextMenu(this.contextMenu)
-    }
-
-    this.tray.setToolTip('Cherry Studio')
+    this.tray.setToolTip('Knowledge')
 
     this.tray.on('right-click', () => {
       if (this.contextMenu) {
@@ -84,7 +65,7 @@ export class TrayService {
         label: trayLocale.show_mini_window,
         click: () => windowService.showMiniWindow()
       },
-      (isWin || isMac) && {
+      isWin && {
         label: selectionLocale.name + (selectionAssistantEnabled ? ' - On' : ' - Off'),
         click: () => {
           if (selectionService) {

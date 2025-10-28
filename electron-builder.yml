@@ -1,21 +1,17 @@
-appId: com.kangfenmao.CherryStudio
-productName: Cherry Studio
+appId: com.knowledge.app
+productName: Knowledge
 electronLanguages:
   - zh-CN
   - zh-TW
   - en-US
-  - ja # macOS/linux/win
-  - ru # macOS/linux/win
-  - zh_CN # for macOS
-  - zh_TW # for macOS
   - en # for macOS
 directories:
   buildResources: build
 
 protocols:
-  - name: Cherry Studio
+  - name: Knowledge
     schemes:
-      - cherrystudio
+      - knowledge
 files:
   - "**/*"
   - "!**/{.vscode,.yarn,.yarn-lock,.github,.cursorrules,.prettierrc}"
@@ -64,7 +60,7 @@ asarUnpack:
   - "**/*.{metal,exp,lib}"
   - "node_modules/@img/sharp-libvips-*/**"
 win:
-  executableName: Cherry Studio
+  executableName: Knowledge
   artifactName: ${productName}-${version}-${arch}-setup.${ext}
   target:
     - target: nsis
@@ -84,36 +80,6 @@ nsis:
 portable:
   artifactName: ${productName}-${version}-${arch}-portable.${ext}
   buildUniversalInstaller: false
-mac:
-  entitlementsInherit: build/entitlements.mac.plist
-  notarize: false
-  artifactName: ${productName}-${version}-${arch}.${ext}
-  minimumSystemVersion: "20.1.0" # 最低支持 macOS 11.0
-  extendInfo:
-    - NSCameraUsageDescription: Application requests access to the device's camera.
-    - NSMicrophoneUsageDescription: Application requests access to the device's microphone.
-    - NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
-    - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
-  target:
-    - target: dmg
-    - target: zip
-linux:
-  artifactName: ${productName}-${version}-${arch}.${ext}
-  target:
-    - target: AppImage
-    - target: deb
-    - target: rpm
-  maintainer: electronjs.org
-  category: Utility
-  desktop:
-    entry:
-      StartupWMClass: CherryStudio
-  mimeTypes:
-    - x-scheme-handler/cherrystudio
-rpm:
-  # Workaround for electron build issue on rpm package:
-  # https://github.com/electron/forge/issues/3594
-  fpm: ["--rpm-rpmbuild-define=_build_id_links none"]
 publish:
   provider: generic
   url: https://releases.cherry-ai.com

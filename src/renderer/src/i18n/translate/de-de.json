@@ -220,7 +220,7 @@
     },
     "authHeaderText": "Im Autorisierungs-Header verwenden:",
     "configuration": "Konfiguration",
-    "description": "Stellen Sie die KI-Funktionen von Cherry Studio über eine OpenAI-kompatible HTTP-API bereit",
+    "description": "Stellen Sie die KI-Funktionen von Knowledge über eine OpenAI-kompatible HTTP-API bereit",
     "documentation": {
       "title": "API-Dokumentation"
     },
@@ -2680,7 +2680,7 @@
           },
           "description": {
             "0": "Der Textauswahl-Assistent benötigt <strong>Bedienungshilfen-Berechtigungen</strong>, um ordnungsgemäß zu funktionieren.",
-            "1": "Klicken Sie auf <strong>Zu Einstellungen</strong> und anschließend im Berechtigungsdialog auf <strong>Systemeinstellungen öffnen</strong>. Suchen Sie danach in der App-Liste <strong>Cherry Studio</strong> und aktivieren Sie den Schalter.",
+            "1": "Klicken Sie auf <strong>Zu Einstellungen</strong> und anschließend im Berechtigungsdialog auf <strong>Systemeinstellungen öffnen</strong>. Suchen Sie danach in der App-Liste <strong>Knowledge</strong> und aktivieren Sie den Schalter.",
             "2": "Nach Abschluss der Einrichtung Textauswahl-Assistent erneut aktivieren."
           },
           "title": "Bedienungshilfen-Berechtigung"
@@ -2692,7 +2692,7 @@
         "title": "App-Filterliste anwenden",
         "user_tips": {
           "mac": "Bitte geben Sie die Bundle-ID der App ein, eine pro Zeile, Groß-/Kleinschreibung egal, unscharfe Übereinstimmung möglich. Z. B.: com.google.Chrome, com.apple.mail",
-          "windows": "Bitte geben Sie den ausführbaren Dateinamen der App ein, eine pro Zeile, Groß-/Kleinschreibung egal, unscharfe Übereinstimmung möglich. Z. B.: chrome.exe, weixin.exe, Cherry Studio.exe"
+          "windows": "Bitte geben Sie den ausführbaren Dateinamen der App ein, eine pro Zeile, Groß-/Kleinschreibung egal, unscharfe Übereinstimmung möglich. Z. B.: chrome.exe, weixin.exe, Knowledge.exe"
         }
       },
       "search_modal": {

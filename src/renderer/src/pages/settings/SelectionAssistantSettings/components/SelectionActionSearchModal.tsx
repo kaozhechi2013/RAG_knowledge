@@ -138,7 +138,7 @@ const SelectionActionSearchModal: FC<SelectionActionSearchModalProps> = ({
   const handleTest = () => {
     const values = form.getFieldsValue()
     if (values.customUrl) {
-      const testUrl = values.customUrl.replace('{{queryString}}', 'cherry studio')
+      const testUrl = values.customUrl.replace('{{queryString}}', 'knowledge')
       window.api.openWebsite(testUrl)
     }
   }
