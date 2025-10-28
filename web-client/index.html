@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Knowledge - 聊天客户端</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .message {
+            animation: fadeIn 0.3s;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 h-screen flex flex-col">
+    <!-- 顶部栏 -->
+    <div class="bg-white shadow-sm p-4 flex items-center justify-between">
+        <h1 class="text-xl font-bold text-gray-800">💬 Knowledge AI 助手</h1>
+        <div class="flex items-center gap-4">
+            <span id="status" class="text-sm text-gray-500">未连接</span>
+            <button onclick="toggleSettings()" class="text-gray-600 hover:text-gray-800">⚙️</button>
+        </div>
+    </div>
+
+    <!-- 设置面板 -->
+    <div id="settings" class="hidden bg-white border-b p-4">
+        <div class="max-w-2xl mx-auto space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">API 地址</label>
+                <input type="text" id="apiUrl" placeholder="http://192.168.1.100:8080" 
+                       class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">API Key</label>
+                <input type="password" id="apiKey" placeholder="your-api-key" 
+                       class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+            </div>
+            <button onclick="saveSettings()" 
+                    class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">
+                保存设置
+            </button>
+        </div>
+    </div>
+
+    <!-- 聊天区域 -->
+    <div class="flex-1 overflow-y-auto p-4" id="chatContainer">
+        <div class="max-w-3xl mx-auto space-y-4" id="messages">
+            <!-- 欢迎消息 -->
+            <div class="bg-white p-4 rounded-lg shadow-sm">
+                <p class="text-gray-600">👋 您好！我是 Knowledge AI 助手，有什么可以帮您的吗？</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 输入区域 -->
+    <div class="bg-white border-t p-4">
+        <div class="max-w-3xl mx-auto flex gap-2">
+            <input type="text" id="messageInput" placeholder="输入您的问题..." 
+                   class="flex-1 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                   onkeypress="if(event.key==='Enter') sendMessage()">
+            <button onclick="sendMessage()" 
+                    class="bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 disabled:bg-gray-300"
+                    id="sendBtn">
+                发送
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // 配置
+        let config = {
+            apiUrl: localStorage.getItem('apiUrl') || 'http://localhost:8080',
+            apiKey: localStorage.getItem('apiKey') || ''
+        };
+
+        // 初始化
+        document.getElementById('apiUrl').value = config.apiUrl;
+        document.getElementById('apiKey').value = config.apiKey;
+        updateStatus();
+
+        // 切换设置面板
+        function toggleSettings() {
+            const settings = document.getElementById('settings');
+            settings.classList.toggle('hidden');
+        }
+
+        // 保存设置
+        function saveSettings() {
+            config.apiUrl = document.getElementById('apiUrl').value;
+            config.apiKey = document.getElementById('apiKey').value;
+            localStorage.setItem('apiUrl', config.apiUrl);
+            localStorage.setItem('apiKey', config.apiKey);
+            toggleSettings();
+            updateStatus();
+            alert('设置已保存！');
+        }
+
+        // 更新连接状态
+        async function updateStatus() {
+            const statusEl = document.getElementById('status');
+            try {
+                const response = await fetch(`${config.apiUrl}/v1/models`, {
+                    headers: {
+                        'Authorization': `Bearer ${config.apiKey}`
+                    }
+                });
+                if (response.ok) {
+                    statusEl.textContent = '✅ 已连接';
+                    statusEl.className = 'text-sm text-green-600';
+                } else {
+                    statusEl.textContent = '❌ 连接失败';
+                    statusEl.className = 'text-sm text-red-600';
+                }
+            } catch (error) {
+                statusEl.textContent = '❌ 无法连接';
+                statusEl.className = 'text-sm text-red-600';
+            }
+        }
+
+        // 添加消息到界面
+        function addMessage(content, isUser = false) {
+            const messagesDiv = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'text-right' : ''}`;
+            
+            const bubble = document.createElement('div');
+            bubble.className = `inline-block max-w-xl p-4 rounded-lg ${
+                isUser 
+                    ? 'bg-blue-500 text-white' 
+                    : 'bg-white shadow-sm text-gray-800'
+            }`;
+            bubble.textContent = content;
+            
+            messageDiv.appendChild(bubble);
+            messagesDiv.appendChild(messageDiv);
+            
+            // 滚动到底部
+            document.getElementById('chatContainer').scrollTop = 
+                document.getElementById('chatContainer').scrollHeight;
+        }
+
+        // 发送消息
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const sendBtn = document.getElementById('sendBtn');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            // 禁用输入
+            input.disabled = true;
+            sendBtn.disabled = true;
+            
+            // 显示用户消息
+            addMessage(message, true);
+            input.value = '';
+            
+            // 显示加载中
+            const loadingDiv = document.createElement('div');
+            loadingDiv.id = 'loading';
+            loadingDiv.className = 'bg-white p-4 rounded-lg shadow-sm';
+            loadingDiv.innerHTML = '<p class="text-gray-500">⏳ AI 正在思考...</p>';
+            document.getElementById('messages').appendChild(loadingDiv);
+            
+            try {
+                // 调用 API
+                const response = await fetch(`${config.apiUrl}/v1/chat/completions`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${config.apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: 'gpt-4',  // 会使用 Knowledge 中配置的默认模型
+                        messages: [
+                            { role: 'user', content: message }
+                        ],
+                        stream: false
+                    })
+                });
+                
+                // 移除加载提示
+                document.getElementById('loading').remove();
+                
+                if (!response.ok) {
+                    throw new Error(`API 错误: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                const aiMessage = data.choices[0].message.content;
+                
+                // 显示 AI 回复
+                addMessage(aiMessage, false);
+                
+            } catch (error) {
+                document.getElementById('loading').remove();
+                addMessage(`❌ 错误: ${error.message}`, false);
+            } finally {
+                // 恢复输入
+                input.disabled = false;
+                sendBtn.disabled = false;
+                input.focus();
+            }
+        }
+
+        // 定期检查连接状态
+        setInterval(updateStatus, 30000);
+    </script>
+</body>
+</html>
