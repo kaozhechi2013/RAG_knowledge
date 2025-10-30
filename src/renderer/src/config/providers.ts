@@ -274,8 +274,8 @@ export const SYSTEM_PROVIDERS_CONFIG: Record<SystemProviderId, SystemProvider> =
     id: 'ollama',
     name: 'Ollama',
     type: 'openai',
-    apiKey: '',
-    apiHost: 'http://localhost:11434',
+    apiKey: 'ollama',
+    apiHost: 'http://localhost:11434/v1',
     models: SYSTEM_MODELS.ollama,
     isSystem: true,
     enabled: false

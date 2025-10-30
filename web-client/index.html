@@ -1,20 +1,158 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Knowledge - 聊天客户端</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Markdown 渲染库 -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
+    <!-- 代码高亮库 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/highlight.min.js"></script>
     <style>
         .message {
             animation: fadeIn 0.3s;
         }
+
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Markdown 样式优化 */
+        .markdown-content {
+            line-height: 1.6;
+        }
+
+        .markdown-content h1,
+        .markdown-content h2,
+        .markdown-content h3,
+        .markdown-content h4,
+        .markdown-content h5,
+        .markdown-content h6 {
+            font-weight: 600;
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+        }
+
+        .markdown-content h1 {
+            font-size: 1.5em;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 0.3em;
+        }
+
+        .markdown-content h2 {
+            font-size: 1.3em;
+            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 0.3em;
+        }
+
+        .markdown-content h3 {
+            font-size: 1.15em;
+        }
+
+        .markdown-content p {
+            margin-bottom: 1em;
+        }
+
+        .markdown-content ul,
+        .markdown-content ol {
+            margin-bottom: 1em;
+            padding-left: 2em;
+        }
+
+        .markdown-content ul {
+            list-style-type: disc;
+        }
+
+        .markdown-content ol {
+            list-style-type: decimal;
+        }
+
+        .markdown-content li {
+            margin-bottom: 0.25em;
+        }
+
+        .markdown-content pre {
+            background-color: #f6f8fa;
+            border-radius: 6px;
+            padding: 1em;
+            overflow-x: auto;
+            margin-bottom: 1em;
+        }
+
+        .markdown-content code {
+            background-color: #f6f8fa;
+            padding: 0.2em 0.4em;
+            border-radius: 3px;
+            font-size: 0.9em;
+            font-family: 'Courier New', monospace;
+        }
+
+        .markdown-content pre code {
+            background-color: transparent;
+            padding: 0;
+        }
+
+        .markdown-content blockquote {
+            border-left: 4px solid #e5e7eb;
+            padding-left: 1em;
+            color: #6b7280;
+            margin-bottom: 1em;
+        }
+
+        .markdown-content table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-bottom: 1em;
+        }
+
+        .markdown-content th,
+        .markdown-content td {
+            border: 1px solid #e5e7eb;
+            padding: 0.5em;
+            text-align: left;
+        }
+
+        .markdown-content th {
+            background-color: #f9fafb;
+            font-weight: 600;
+        }
+
+        .markdown-content a {
+            color: #3b82f6;
+            text-decoration: underline;
+        }
+
+        .markdown-content a:hover {
+            color: #2563eb;
+        }
+
+        .markdown-content strong {
+            font-weight: 600;
+        }
+
+        .markdown-content em {
+            font-style: italic;
+        }
+
+        .markdown-content hr {
+            border: none;
+            border-top: 1px solid #e5e7eb;
+            margin: 1.5em 0;
         }
     </style>
 </head>
+
 <body class="bg-gray-100 h-screen flex flex-col">
     <!-- 顶部栏 -->
     <div class="bg-white shadow-sm p-4 flex items-center justify-between">
@@ -30,18 +168,55 @@
         <div class="max-w-2xl mx-auto space-y-4">
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">API 地址</label>
-                <input type="text" id="apiUrl" placeholder="http://192.168.1.100:8080" 
-                       class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                <input type="text" id="apiUrl" placeholder="http://192.168.1.100:8080"
+                    class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">API Key</label>
-                <input type="password" id="apiKey" placeholder="your-api-key" 
-                       class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                <input type="password" id="apiKey" placeholder="your-api-key"
+                    class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
             </div>
-            <button onclick="saveSettings()" 
-                    class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">
-                保存设置
-            </button>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">选择模型</label>
+                <select id="modelSelect" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                    <option value="">请先保存设置以加载模型...</option>
+                </select>
+                <button onclick="refreshModels()" class="mt-2 text-sm text-blue-600 hover:text-blue-800">
+                    🔄 刷新模型列表
+                </button>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                    📦 导入助手配置
+                </label>
+                <textarea id="importConfig" rows="6" placeholder='在 Knowledge 桌面应用中:
+1. 右键点击助手
+2. 选择 "导出Web端配置"
+3. 粘贴到这里
+4. 点击下方"导入配置"按钮'
+                    class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 font-mono text-sm"></textarea>
+                <button onclick="importAssistantConfig()"
+                    class="mt-2 w-full bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600">
+                    📥 导入配置
+                </button>
+                <div class="mt-2 p-3 bg-blue-50 rounded-lg">
+                    <p class="text-xs text-blue-800">
+                        <strong>💡 提示:</strong> 导入配置后,助手ID和知识库将自动设置,可直接开始对话!
+                    </p>
+                </div>
+                <!-- 隐藏字段用于存储助手ID -->
+                <input type="hidden" id="assistantId">
+            </div>
+            <div class="flex gap-2">
+                <button onclick="saveSettings()"
+                    class="flex-1 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">
+                    保存设置
+                </button>
+                <button onclick="testConnection()"
+                    class="flex-1 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600">
+                    测试连接
+                </button>
+            </div>
         </div>
     </div>
 
@@ -50,22 +225,25 @@
         <div class="max-w-3xl mx-auto space-y-4" id="messages">
             <!-- 欢迎消息 -->
             <div class="bg-white p-4 rounded-lg shadow-sm">
-                <p class="text-gray-600">👋 您好！我是 Knowledge AI 助手，有什么可以帮您的吗？</p>
+                <div class="markdown-content text-gray-600">
+                    <p>👋 <strong>您好!</strong> 我是 Knowledge AI 助手,有什么可以帮您的吗?</p>
+                </div>
             </div>
         </div>
     </div>
 
     <!-- 输入区域 -->
     <div class="bg-white border-t p-4">
-        <div class="max-w-3xl mx-auto flex gap-2">
-            <input type="text" id="messageInput" placeholder="输入您的问题..." 
-                   class="flex-1 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                   onkeypress="if(event.key==='Enter') sendMessage()">
-            <button onclick="sendMessage()" 
-                    class="bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 disabled:bg-gray-300"
-                    id="sendBtn">
-                发送
-            </button>
+        <div class="max-w-3xl mx-auto">
+            <div class="flex gap-2">
+                <input type="text" id="messageInput" placeholder="输入您的问题..."
+                    class="flex-1 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                    onkeypress="if(event.key==='Enter') sendMessage()">
+                <button onclick="sendMessage()"
+                    class="bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 disabled:bg-gray-300" id="sendBtn">
+                    发送
+                </button>
+            </div>
         </div>
     </div>
 
@@ -73,29 +251,175 @@
         // 配置
         let config = {
             apiUrl: localStorage.getItem('apiUrl') || 'http://localhost:8080',
-            apiKey: localStorage.getItem('apiKey') || ''
+            apiKey: localStorage.getItem('apiKey') || '',
+            model: localStorage.getItem('model') || 'gpt-4',
+            assistantId: localStorage.getItem('assistantId') || '',
+            knowledgeBases: JSON.parse(localStorage.getItem('knowledgeBases') || '[]')
         };
+
+        let availableModels = [];
 
         // 初始化
         document.getElementById('apiUrl').value = config.apiUrl;
         document.getElementById('apiKey').value = config.apiKey;
+        document.getElementById('assistantId').value = config.assistantId;
         updateStatus();
+        refreshModels();
 
         // 切换设置面板
         function toggleSettings() {
             const settings = document.getElementById('settings');
             settings.classList.toggle('hidden');
+            if (!settings.classList.contains('hidden')) {
+                refreshModels();
+            }
+        }
+
+        // 导入助手配置
+        function importAssistantConfig() {
+            const textarea = document.getElementById('importConfig');
+            const configText = textarea.value.trim();
+            
+            if (!configText) {
+                alert('⚠️ 请粘贴配置内容');
+                return;
+            }
+            
+            try {
+                const importedConfig = JSON.parse(configText);
+                
+                // 验证配置结构
+                if (!importedConfig.assistantId) {
+                    throw new Error('配置中缺少 assistantId');
+                }
+                
+                // 更新配置
+                config.assistantId = importedConfig.assistantId;
+                config.knowledgeBases = importedConfig.knowledgeBases || [];
+                
+                // 更新 UI
+                document.getElementById('assistantId').value = config.assistantId;
+                
+                // 保存到 localStorage
+                saveSettings();
+                
+                // 清空输入框
+                textarea.value = '';
+                
+                // 显示成功消息
+                alert(`✅ 配置导入成功!\n\n助手: ${importedConfig.assistantName || '未命名'}\n助手ID: ${config.assistantId}\n知识库数量: ${config.knowledgeBases.length}\n\n配置已自动保存，现在可以开始对话了！`);
+                
+            } catch (error) {
+                alert(`❌ 配置导入失败\n\n错误: ${error.message}\n\n请确保粘贴的是从 Knowledge 应用导出的完整配置`);
+                console.error('导入配置失败:', error);
+            }
+        }
+
+        // 刷新模型列表
+        async function refreshModels() {
+            const selectEl = document.getElementById('modelSelect');
+            selectEl.innerHTML = '<option value="">加载中...</option>';
+
+            try {
+                const response = await fetch(`${config.apiUrl}/v1/models`, {
+                    headers: {
+                        'Authorization': `Bearer ${config.apiKey}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                availableModels = data.data || [];
+
+                if (availableModels.length === 0) {
+                    selectEl.innerHTML = '<option value="">⚠️ 未找到模型，请在 Knowledge 应用中配置 LLM 服务商</option>';
+                    alert('⚠️ 重要提示\n\n未找到可用的模型！\n\n请先在 Knowledge 桌面应用中：\n1. 进入"设置" → "服务商"\n2. 添加并配置至少一个 LLM 服务商（如 OpenAI、Claude 等）\n3. 然后回到这里刷新模型列表');
+                    return;
+                }
+
+                selectEl.innerHTML = '';
+                availableModels.forEach(model => {
+                    const option = document.createElement('option');
+                    option.value = model.id;
+                    option.textContent = `${model.id} (${model.owned_by || 'unknown'})`;
+                    if (model.id === config.model) {
+                        option.selected = true;
+                    }
+                    selectEl.appendChild(option);
+                });
+
+                // 如果当前选择的模型不在列表中，选择第一个
+                if (!availableModels.find(m => m.id === config.model)) {
+                    config.model = availableModels[0].id;
+                    selectEl.value = config.model;
+                }
+
+            } catch (error) {
+                selectEl.innerHTML = '<option value="">❌ 加载失败，请检查 API 设置</option>';
+                console.error('获取模型列表失败:', error);
+            }
+        }
+
+        // 测试连接
+        async function testConnection() {
+            try {
+                const response = await fetch(`${config.apiUrl}/v1/models`, {
+                    headers: {
+                        'Authorization': `Bearer ${config.apiKey}`
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const count = data.data ? data.data.length : 0;
+                    if (count > 0) {
+                        alert(`✅ 连接成功！\n\n找到 ${count} 个可用模型`);
+                    } else {
+                        alert('⚠️ 连接成功，但未找到模型\n\n请在 Knowledge 应用中配置 LLM 服务商');
+                    }
+                } else {
+                    alert(`❌ 连接失败\n\nHTTP ${response.status}: ${response.statusText}`);
+                }
+            } catch (error) {
+                alert(`❌ 连接失败\n\n${error.message}\n\n请检查：\n1. API 地址是否正确\n2. Knowledge 应用是否运行\n3. API Server 是否已启用`);
+            }
         }
 
         // 保存设置
         function saveSettings() {
             config.apiUrl = document.getElementById('apiUrl').value;
             config.apiKey = document.getElementById('apiKey').value;
+            config.assistantId = document.getElementById('assistantId').value.trim();
+            const selectedModel = document.getElementById('modelSelect').value;
+            if (selectedModel) {
+                config.model = selectedModel;
+            }
+
             localStorage.setItem('apiUrl', config.apiUrl);
             localStorage.setItem('apiKey', config.apiKey);
+            localStorage.setItem('model', config.model);
+            localStorage.setItem('assistantId', config.assistantId);
+            localStorage.setItem('knowledgeBases', JSON.stringify(config.knowledgeBases || []));
+
             toggleSettings();
             updateStatus();
-            alert('设置已保存！');
+            
+            let alertMsg = '✅ 设置已保存！\n\n当前模型: ' + config.model;
+            if (config.assistantId) {
+                alertMsg += '\n助手ID: ' + config.assistantId;
+                alertMsg += '\n知识库数量: ' + (config.knowledgeBases?.length || 0);
+                if (config.knowledgeBases && config.knowledgeBases.length > 0) {
+                    alertMsg += '\n\n💡 将自动使用助手关联的知识库';
+                } else {
+                    alertMsg += '\n\n⚠️ 提示: 请使用"导入助手配置"功能导入知识库配置';
+                }
+            } else {
+                alertMsg += '\n\n💡 提示: 使用"导入助手配置"可启用知识库功能';
+            }
+            alert(alertMsg);
         }
 
         // 更新连接状态
@@ -108,8 +432,10 @@
                     }
                 });
                 if (response.ok) {
-                    statusEl.textContent = '✅ 已连接';
-                    statusEl.className = 'text-sm text-green-600';
+                    const data = await response.json();
+                    const count = data.data ? data.data.length : 0;
+                    statusEl.textContent = count > 0 ? `✅ 已连接 (${count} 模型)` : '⚠️ 已连接 (无模型)';
+                    statusEl.className = count > 0 ? 'text-sm text-green-600' : 'text-sm text-yellow-600';
                 } else {
                     statusEl.textContent = '❌ 连接失败';
                     statusEl.className = 'text-sm text-red-600';
@@ -125,20 +451,39 @@
             const messagesDiv = document.getElementById('messages');
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${isUser ? 'text-right' : ''}`;
-            
+
             const bubble = document.createElement('div');
-            bubble.className = `inline-block max-w-xl p-4 rounded-lg ${
-                isUser 
-                    ? 'bg-blue-500 text-white' 
+            bubble.className = `inline-block max-w-xl p-4 rounded-lg ${isUser
+                    ? 'bg-blue-500 text-white'
                     : 'bg-white shadow-sm text-gray-800'
-            }`;
-            bubble.textContent = content;
+                }`;
             
+            // 用户消息使用纯文本,AI 消息使用 Markdown 渲染
+            if (isUser) {
+                bubble.textContent = content;
+            } else {
+                bubble.className += ' markdown-content';
+                // 配置 marked 选项
+                marked.setOptions({
+                    breaks: true, // 支持换行
+                    gfm: true, // GitHub Flavored Markdown
+                    highlight: function(code, lang) {
+                        if (lang && hljs.getLanguage(lang)) {
+                            try {
+                                return hljs.highlight(code, { language: lang }).value;
+                            } catch (err) {}
+                        }
+                        return hljs.highlightAuto(code).value;
+                    }
+                });
+                bubble.innerHTML = marked.parse(content);
+            }
+
             messageDiv.appendChild(bubble);
             messagesDiv.appendChild(messageDiv);
-            
+
             // 滚动到底部
-            document.getElementById('chatContainer').scrollTop = 
+            document.getElementById('chatContainer').scrollTop =
                 document.getElementById('chatContainer').scrollHeight;
         }
 
@@ -147,25 +492,78 @@
             const input = document.getElementById('messageInput');
             const sendBtn = document.getElementById('sendBtn');
             const message = input.value.trim();
-            
+
             if (!message) return;
-            
+
+            // 检查是否有可用模型
+            if (!config.model || config.model === '') {
+                alert('⚠️ 请先配置模型\n\n点击右上角 ⚙️ 设置，选择一个可用的模型');
+                toggleSettings();
+                return;
+            }
+
             // 禁用输入
             input.disabled = true;
             sendBtn.disabled = true;
-            
+
             // 显示用户消息
             addMessage(message, true);
             input.value = '';
-            
+
             // 显示加载中
             const loadingDiv = document.createElement('div');
             loadingDiv.id = 'loading';
             loadingDiv.className = 'bg-white p-4 rounded-lg shadow-sm';
-            loadingDiv.innerHTML = '<p class="text-gray-500">⏳ AI 正在思考...</p>';
+            
+            // 根据是否使用知识库显示不同的提示
+            const hasKnowledgeBase = config.knowledgeBases && config.knowledgeBases.length > 0;
+            const loadingText = hasKnowledgeBase 
+                ? `<div class="space-y-2">
+                    <p class="text-blue-600">🔍 正在搜索知识库...</p>
+                    <p class="text-gray-500 text-sm">模型: ${config.model}</p>
+                   </div>`
+                : `<p class="text-gray-500">⏳ AI 正在思考... (模型: ${config.model})</p>`;
+            
+            loadingDiv.innerHTML = loadingText;
             document.getElementById('messages').appendChild(loadingDiv);
             
+            // 滚动到底部
+            document.getElementById('chatContainer').scrollTop =
+                document.getElementById('chatContainer').scrollHeight;
+
             try {
+                // 构造请求体
+                const requestBody = {
+                    model: config.model,
+                    messages: [
+                        { role: 'user', content: message }
+                    ],
+                    stream: false
+                };
+
+                // 如果设置了助手ID，添加到请求中
+                if (config.assistantId) {
+                    requestBody.assistant_id = config.assistantId;
+                }
+                
+                // 如果有知识库配置，添加到请求中
+                if (config.knowledgeBases && config.knowledgeBases.length > 0) {
+                    requestBody.knowledge_bases = config.knowledgeBases;
+                }
+
+                // 详细日志
+                console.group('📤 发送请求详情');
+                console.log('URL:', `${config.apiUrl}/v1/chat/completions`);
+                console.log('Model:', config.model);
+                console.log('Assistant ID:', config.assistantId || '❌ 未设置');
+                console.log('Knowledge Bases:', config.knowledgeBases?.length || 0);
+                console.log('Message:', message);
+                console.log('完整请求体:', JSON.stringify(requestBody, null, 2));
+                console.groupEnd();
+
+                // 记录开始时间
+                const startTime = Date.now();
+
                 // 调用 API
                 const response = await fetch(`${config.apiUrl}/v1/chat/completions`, {
                     method: 'POST',
@@ -173,31 +571,61 @@
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${config.apiKey}`
                     },
-                    body: JSON.stringify({
-                        model: 'gpt-4',  // 会使用 Knowledge 中配置的默认模型
-                        messages: [
-                            { role: 'user', content: message }
-                        ],
-                        stream: false
-                    })
+                    body: JSON.stringify(requestBody)
                 });
-                
+
+                // 计算响应时间
+                const endTime = Date.now();
+                const responseTime = ((endTime - startTime) / 1000).toFixed(2);
+
                 // 移除加载提示
                 document.getElementById('loading').remove();
-                
+
+                // 日志：响应状态
+                console.group('📥 收到响应');
+                console.log(`⏱️ 总响应时间: ${responseTime} 秒`);
+                console.log('Status:', response.status, response.statusText);
+                console.log('Headers:', Object.fromEntries(response.headers.entries()));
+
                 if (!response.ok) {
-                    throw new Error(`API 错误: ${response.status}`);
+                    const errorText = await response.text();
+                    console.error('❌ API 错误响应:', errorText);
+                    console.groupEnd();
+                    throw new Error(`API 错误 ${response.status}: ${errorText}`);
                 }
-                
+
                 const data = await response.json();
-                const aiMessage = data.choices[0].message.content;
+                console.log('✅ API 响应数据:', data);
                 
+                // 检查是否使用了知识库
+                if (data.usage || data.metadata) {
+                    console.log('📚 元数据信息:', {
+                        usage: data.usage,
+                        metadata: data.metadata
+                    });
+                }
+                console.groupEnd();
+
+                if (!data.choices || data.choices.length === 0) {
+                    throw new Error('API 返回数据格式错误：没有 choices');
+                }
+
+                const aiMessage = data.choices[0].message.content;
+
                 // 显示 AI 回复
                 addMessage(aiMessage, false);
-                
+
             } catch (error) {
-                document.getElementById('loading').remove();
-                addMessage(`❌ 错误: ${error.message}`, false);
+                console.error('发送消息失败:', error);
+                if (document.getElementById('loading')) {
+                    document.getElementById('loading').remove();
+                }
+
+                let errorMsg = `❌ 错误: ${error.message}`;
+                if (error.message.includes('API 错误')) {
+                    errorMsg += '\n\n可能的原因:\n1. 模型未配置或不可用\n2. API Key 错误\n3. 网络问题';
+                }
+                addMessage(errorMsg, false);
             } finally {
                 // 恢复输入
                 input.disabled = false;
@@ -210,4 +638,5 @@
         setInterval(updateStatus, 30000);
     </script>
 </body>
+
 </html>

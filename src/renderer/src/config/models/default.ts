@@ -261,7 +261,26 @@ export const SYSTEM_MODELS: Record<SystemProviderId | 'defaultModel', Model[]> =
     { id: 'deepseek-v3', name: 'DeepSeek-V3', provider: 'burncloud', group: 'deepseek-ai' }
   ],
   ovms: [],
-  ollama: [],
+  ollama: [
+    {
+      id: 'deepseek-r1:14b',
+      name: 'DeepSeek R1 14B',
+      provider: 'ollama',
+      group: 'DeepSeek'
+    },
+    {
+      id: 'qwen3:14b',
+      name: 'Qwen3 14B',
+      provider: 'ollama',
+      group: 'Qwen'
+    },
+    {
+      id: 'qwen3:8b',
+      name: 'Qwen3 8B',
+      provider: 'ollama',
+      group: 'Qwen'
+    }
+  ],
   lmstudio: [],
   silicon: [
     {

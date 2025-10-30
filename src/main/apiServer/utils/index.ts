@@ -23,12 +23,33 @@ export async function getAvailableProviders(): Promise<Provider[]> {
       return []
     }
 
-    // Only support OpenAI type providers for API server
-    const openAIProviders = providers.filter((p: Provider) => p.enabled && p.type === 'openai')
+    // Support OpenAI-compatible providers for API server
+    // This includes 'openai' type and providers with OpenAI-compatible baseURL (like Ollama)
+    const compatibleProviders = providers.filter((p: Provider) => {
+      if (!p.enabled) return false
+      
+      // Always include OpenAI type providers
+      if (p.type === 'openai') return true
+      
+      // Include providers with OpenAI-compatible API (Ollama runs on localhost:11434 by default)
+      // Check if the provider has an apiHost that suggests OpenAI compatibility
+      const hasOpenAICompatibleAPI = p.apiHost && (
+        p.apiHost.includes('localhost:11434') || // Ollama default
+        p.apiHost.includes('127.0.0.1:11434') ||
+        p.id?.toLowerCase().includes('ollama') // Provider ID contains 'ollama'
+      )
+      
+      if (hasOpenAICompatibleAPI) {
+        logger.debug(`Including OpenAI-compatible provider: ${p.id} (${p.apiHost})`)
+        return true
+      }
+      
+      return false
+    })
 
-    logger.info(`Filtered to ${openAIProviders.length} OpenAI providers from ${providers.length} total providers`)
+    logger.info(`Filtered to ${compatibleProviders.length} compatible providers from ${providers.length} total providers`)
 
-    return openAIProviders
+    return compatibleProviders
   } catch (error: any) {
     logger.error('Failed to get providers from Redux store:', error)
     return []
@@ -138,7 +159,10 @@ export async function validateModelId(
     const modelId = getRealProviderModel(model)
     const provider = await getProviderByModel(model)
 
+    logger.debug(`Validating model: ${model}, providerId: ${providerId}, modelId: ${modelId}`)
+
     if (!provider) {
+      logger.warn(`Provider not found for model: ${model}`)
       return {
         valid: false,
         error: {
@@ -149,10 +173,14 @@ export async function validateModelId(
       }
     }
 
+    logger.debug(`Provider found: ${provider.id}, type: ${provider.type}, models count: ${provider.models?.length || 0}`)
+    logger.debug(`Provider models: ${provider.models?.map(m => m.id).join(', ')}`)
+
     // Check if model exists in provider
     const modelExists = provider.models?.some((m) => m.id === modelId)
     if (!modelExists) {
       const availableModels = provider.models?.map((m) => m.id).join(', ') || 'none'
+      logger.warn(`Model '${modelId}' not found in provider '${providerId}'. Available: ${availableModels}`)
       return {
         valid: false,
         error: {
