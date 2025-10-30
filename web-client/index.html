@@ -487,7 +487,7 @@
                 document.getElementById('chatContainer').scrollHeight;
         }
 
-        // 发送消息
+        // 发送消息 (流式响应版本)
         async function sendMessage() {
             const input = document.getElementById('messageInput');
             const sendBtn = document.getElementById('sendBtn');
@@ -510,26 +510,30 @@
             addMessage(message, true);
             input.value = '';
 
-            // 显示加载中
-            const loadingDiv = document.createElement('div');
-            loadingDiv.id = 'loading';
-            loadingDiv.className = 'bg-white p-4 rounded-lg shadow-sm';
+            // 创建 AI 回复容器
+            const messagesDiv = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message';
+
+            const bubble = document.createElement('div');
+            bubble.className = 'inline-block max-w-xl p-4 rounded-lg bg-white shadow-sm text-gray-800 markdown-content';
+            bubble.id = 'streaming-message';
             
-            // 根据是否使用知识库显示不同的提示
+            // 根据是否使用知识库显示不同的加载提示
             const hasKnowledgeBase = config.knowledgeBases && config.knowledgeBases.length > 0;
-            const loadingText = hasKnowledgeBase 
-                ? `<div class="space-y-2">
-                    <p class="text-blue-600">🔍 正在搜索知识库...</p>
-                    <p class="text-gray-500 text-sm">模型: ${config.model}</p>
-                   </div>`
-                : `<p class="text-gray-500">⏳ AI 正在思考... (模型: ${config.model})</p>`;
-            
-            loadingDiv.innerHTML = loadingText;
-            document.getElementById('messages').appendChild(loadingDiv);
-            
+            bubble.innerHTML = hasKnowledgeBase 
+                ? '<span class="text-blue-600">🔍 正在搜索知识库...</span>'
+                : '<span class="text-gray-400">⏳ 正在思考...</span>';
+
+            messageDiv.appendChild(bubble);
+            messagesDiv.appendChild(messageDiv);
+
             // 滚动到底部
-            document.getElementById('chatContainer').scrollTop =
-                document.getElementById('chatContainer').scrollHeight;
+            const scrollToBottom = () => {
+                const container = document.getElementById('chatContainer');
+                container.scrollTop = container.scrollHeight;
+            };
+            scrollToBottom();
 
             try {
                 // 构造请求体
@@ -538,7 +542,7 @@
                     messages: [
                         { role: 'user', content: message }
                     ],
-                    stream: false
+                    stream: true  // 启用流式响应
                 };
 
                 // 如果设置了助手ID，添加到请求中
@@ -552,19 +556,20 @@
                 }
 
                 // 详细日志
-                console.group('📤 发送请求详情');
+                console.group('📤 发送流式请求');
                 console.log('URL:', `${config.apiUrl}/v1/chat/completions`);
                 console.log('Model:', config.model);
+                console.log('Stream:', true);
                 console.log('Assistant ID:', config.assistantId || '❌ 未设置');
                 console.log('Knowledge Bases:', config.knowledgeBases?.length || 0);
-                console.log('Message:', message);
-                console.log('完整请求体:', JSON.stringify(requestBody, null, 2));
                 console.groupEnd();
 
                 // 记录开始时间
                 const startTime = Date.now();
+                let firstTokenTime = null;
+                let fullContent = '';
 
-                // 调用 API
+                // 调用 API (流式)
                 const response = await fetch(`${config.apiUrl}/v1/chat/completions`, {
                     method: 'POST',
                     headers: {
@@ -574,58 +579,90 @@
                     body: JSON.stringify(requestBody)
                 });
 
-                // 计算响应时间
-                const endTime = Date.now();
-                const responseTime = ((endTime - startTime) / 1000).toFixed(2);
-
-                // 移除加载提示
-                document.getElementById('loading').remove();
-
-                // 日志：响应状态
-                console.group('📥 收到响应');
-                console.log(`⏱️ 总响应时间: ${responseTime} 秒`);
-                console.log('Status:', response.status, response.statusText);
-                console.log('Headers:', Object.fromEntries(response.headers.entries()));
-
                 if (!response.ok) {
                     const errorText = await response.text();
                     console.error('❌ API 错误响应:', errorText);
-                    console.groupEnd();
                     throw new Error(`API 错误 ${response.status}: ${errorText}`);
                 }
 
-                const data = await response.json();
-                console.log('✅ API 响应数据:', data);
+                // 处理流式响应
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
                 
-                // 检查是否使用了知识库
-                if (data.usage || data.metadata) {
-                    console.log('📚 元数据信息:', {
-                        usage: data.usage,
-                        metadata: data.metadata
-                    });
+                console.log('📥 开始接收流式数据...');
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    
+                    if (done) {
+                        console.log('✅ 流式响应完成');
+                        break;
+                    }
+
+                    // 解码数据块
+                    const chunk = decoder.decode(value, { stream: true });
+                    const lines = chunk.split('\n');
+
+                    for (const line of lines) {
+                        if (line.trim() === '') continue;
+                        if (line.trim() === 'data: [DONE]') continue;
+                        
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const jsonStr = line.slice(6); // 移除 "data: " 前缀
+                                const data = JSON.parse(jsonStr);
+                                
+                                // 提取内容
+                                if (data.choices && data.choices[0]?.delta?.content) {
+                                    const content = data.choices[0].delta.content;
+                                    fullContent += content;
+                                    
+                                    // 记录首个 token 时间
+                                    if (!firstTokenTime) {
+                                        firstTokenTime = Date.now();
+                                        const timeToFirstToken = ((firstTokenTime - startTime) / 1000).toFixed(2);
+                                        console.log(`⚡ 首个 token 时间: ${timeToFirstToken} 秒`);
+                                    }
+                                    
+                                    // 实时渲染 Markdown
+                                    bubble.innerHTML = marked.parse(fullContent);
+                                    scrollToBottom();
+                                }
+                            } catch (e) {
+                                // 忽略解析错误，继续处理下一行
+                            }
+                        }
+                    }
                 }
+
+                // 计算总时间
+                const endTime = Date.now();
+                const totalTime = ((endTime - startTime) / 1000).toFixed(2);
+                const generationTime = firstTokenTime ? ((endTime - firstTokenTime) / 1000).toFixed(2) : '0';
+                
+                console.group('📊 性能统计');
+                console.log(`⏱️ 总时间: ${totalTime} 秒`);
+                console.log(`⚡ 首个 token: ${((firstTokenTime - startTime) / 1000).toFixed(2)} 秒`);
+                console.log(`✍️ 生成时间: ${generationTime} 秒`);
+                console.log(`📝 内容长度: ${fullContent.length} 字符`);
                 console.groupEnd();
 
-                if (!data.choices || data.choices.length === 0) {
-                    throw new Error('API 返回数据格式错误：没有 choices');
-                }
-
-                const aiMessage = data.choices[0].message.content;
-
-                // 显示 AI 回复
-                addMessage(aiMessage, false);
+                // 移除临时 ID
+                bubble.removeAttribute('id');
 
             } catch (error) {
                 console.error('发送消息失败:', error);
-                if (document.getElementById('loading')) {
-                    document.getElementById('loading').remove();
+                
+                // 显示错误消息
+                const bubble = document.getElementById('streaming-message');
+                if (bubble) {
+                    let errorMsg = `❌ 错误: ${error.message}`;
+                    if (error.message.includes('API 错误')) {
+                        errorMsg += '\n\n可能的原因:\n1. 模型未配置或不可用\n2. API Key 错误\n3. 网络问题';
+                    }
+                    bubble.innerHTML = `<pre class="whitespace-pre-wrap">${errorMsg}</pre>`;
+                    bubble.removeAttribute('id');
                 }
-
-                let errorMsg = `❌ 错误: ${error.message}`;
-                if (error.message.includes('API 错误')) {
-                    errorMsg += '\n\n可能的原因:\n1. 模型未配置或不可用\n2. API Key 错误\n3. 网络问题';
-                }
-                addMessage(errorMsg, false);
             } finally {
                 // 恢复输入
                 input.disabled = false;
