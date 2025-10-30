@@ -249,8 +249,18 @@
 
     <script>
         // 配置
+        // 自动检测并使用服务器IP (如果是通过局域网IP访问的)
+        function getDefaultApiUrl() {
+            const hostname = window.location.hostname;
+            // 如果通过IP访问,使用相同IP的8080端口
+            if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
+                return `http://${hostname}:8080`;
+            }
+            return 'http://localhost:8080';
+        }
+
         let config = {
-            apiUrl: localStorage.getItem('apiUrl') || 'http://localhost:8080',
+            apiUrl: localStorage.getItem('apiUrl') || getDefaultApiUrl(),
             apiKey: localStorage.getItem('apiKey') || '',
             model: localStorage.getItem('model') || 'gpt-4',
             assistantId: localStorage.getItem('assistantId') || '',
@@ -317,13 +327,23 @@
 
         // 刷新模型列表
         async function refreshModels() {
+            // 读取输入框的当前值
+            const apiUrl = document.getElementById('apiUrl').value.trim();
+            const apiKey = document.getElementById('apiKey').value.trim();
+
+            if (!apiUrl || !apiKey) {
+                const selectEl = document.getElementById('modelSelect');
+                selectEl.innerHTML = '<option value="">⚠️ 请先填写 API 地址和 Key</option>';
+                return;
+            }
+
             const selectEl = document.getElementById('modelSelect');
             selectEl.innerHTML = '<option value="">加载中...</option>';
 
             try {
-                const response = await fetch(`${config.apiUrl}/v1/models`, {
+                const response = await fetch(`${apiUrl}/v1/models`, {
                     headers: {
-                        'Authorization': `Bearer ${config.apiKey}`
+                        'Authorization': `Bearer ${apiKey}`
                     }
                 });
 
@@ -365,10 +385,19 @@
 
         // 测试连接
         async function testConnection() {
+            // 读取输入框的当前值,而不是已保存的 config
+            const apiUrl = document.getElementById('apiUrl').value.trim();
+            const apiKey = document.getElementById('apiKey').value.trim();
+
+            if (!apiUrl) {
+                alert('❌ 请先填写 API 地址');
+                return;
+            }
+
             try {
-                const response = await fetch(`${config.apiUrl}/v1/models`, {
+                const response = await fetch(`${apiUrl}/v1/models`, {
                     headers: {
-                        'Authorization': `Bearer ${config.apiKey}`
+                        'Authorization': `Bearer ${apiKey}`
                     }
                 });
 

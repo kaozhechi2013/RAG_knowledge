@@ -1,52 +1,88 @@
-# Knowledge Web 客户端使用指南
+# 🌐 Knowledge Web 客户端
+
+局域网访问 Knowledge AI 助手的 Web 客户端。
+
+---
+
+## � 完整文档
+
+**请查看:** [LAN-SETUP-GUIDE.md](./LAN-SETUP-GUIDE.md)
+
+包含:
+- ✅ 快速开始 (3分钟配置)
+- ✅ 详细配置步骤
+- ✅ 监控和管理 (多人使用)
+- ✅ 故障排除
+- ✅ 常见问题 FAQ
+
+---
+
+## 🚀 快速使用
+
+### 管理员 (首次配置)
+
+1. **配置防火墙** (必须以管理员身份):
+   ```
+   右键 setup-firewall.bat → 以管理员身份运行
+   ```
+
+2. **启动 Web 服务器**:
+   ```
+   双击 start-server.bat
+   ```
+
+3. **启动 API Server**:
+   ```
+   运行根目录的: 启动Cherry Studio.bat
+   ```
+
+4. **分享地址给同事**:
+   ```
+   Web 界面: http://你的IP:8081
+   API 地址: http://你的IP:8080
+   ```
+
+### 同事使用
+
+1. 打开管理员分享的 Web 地址
+2. 点击设置 ⚙️
+3. 输入 API Key (向管理员索取)
+4. 选择模型
+5. 保存设置
+6. 开始聊天!
+
+---
+
+## 📊 监控
+
+**实时查看谁在使用:**
+```powershell
+.\monitor-connections.ps1
+```
+
+**管理用户 (IP → 姓名):**
+```powershell
+.\manage-users.ps1
+```
+
+---
 
 ## 📁 文件说明
 
-```
-web-client/
-├── index.html                ← 主聊天界面（推荐使用）
-├── diagnostic.html           ← API连接诊断工具
-├── start-server.bat          ← 启动Web文件服务器
-├── README.md                ← 技术文档（本文件）
-├── 使用说明_小白版.md         ← 新手友好指南 👈 推荐先看这个！
-├── 工作原理图解.md            ← 架构原理详解
-└── TROUBLESHOOTING.md       ← 故障排除指南
-```
+| 文件 | 说明 |
+|------|------|
+| `index.html` | Web 聊天界面 |
+| `setup-firewall.bat` | 配置防火墙 (管理员运行) |
+| `start-server.bat` | 启动 Web 服务器 |
+| `test-lan-connection.bat` | 测试连接 |
+| `monitor-connections.ps1` | 实时监控 |
+| `manage-users.ps1` | 用户管理 |
+| `LAN-SETUP-GUIDE.md` | 📖 完整教程 |
 
-**重要提示**：
-- 🌟 **新手请先阅读**: `使用说明_小白版.md` - 零基础也能看懂！
-- 📊 **理解原理**: `工作原理图解.md` - 配图讲解工作流程
-- 🔧 **遇到问题**: `TROUBLESHOOTING.md` - 常见问题解答
+---
 
-## 🚀 快速开始
-
-### 第一步：启动管理端 API Server
-
-1. 打开 Knowledge 桌面应用（管理端）
-2. 进入 **设置** → **API Server**
-3. 开启 API Server
-4. 设置：
-   - 端口：`8080`（或其他端口）
-   - API Key：设置一个密钥（例如：`sk-knowledge-2025`）
-5. 确认服务已启动
-
-### 第二步：部署 Web 客户端
-
-#### 方案 A：本地文件访问（适合测试）
-
-1. 直接双击 `index.html` 文件
-2. 浏览器会自动打开
-
-#### 方案 B：局域网访问（推荐）
-
-**使用 Python 快速启动 Web 服务器：**
-
-```bash
-# 进入 web-client 目录
-cd E:\Project\RAG_knowledge\web-client
-
-# 启动 HTTP 服务器（Python 3）
-python -m http.server 8081
+**版本:** v1.0  
+**更新日期:** 2025-10-30
 
 # 或者使用 Python 2
 python -m SimpleHTTPServer 8081
