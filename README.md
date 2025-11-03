@@ -120,7 +120,7 @@ yarn install
 yarn dev
 
 # 方式 2: 使用启动脚本
-启动Cherry Studio.bat
+启动Knowledge.bat
 ```
 
 ### 打包应用

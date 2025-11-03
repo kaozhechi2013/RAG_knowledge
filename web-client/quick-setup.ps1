@@ -85,7 +85,7 @@ Write-Host "Share with colleagues:" -ForegroundColor Yellow
 Write-Host "  Web URL: http://${localIP}:8081" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Next steps:" -ForegroundColor Yellow
-Write-Host "  1. Start API Server (run: start Cherry Studio.bat)" -ForegroundColor White
+Write-Host "  1. Start API Server (run: start Knowledge.bat)" -ForegroundColor White
 Write-Host "  2. Start Web Server (run: start-server.bat)" -ForegroundColor White
 Write-Host "  3. Get API Key from API Server console" -ForegroundColor White
 Write-Host "  4. Share the info above with colleagues" -ForegroundColor White

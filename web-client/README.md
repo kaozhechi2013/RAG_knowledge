@@ -33,7 +33,7 @@
 
 3. **启动 API Server**:
    ```
-   运行根目录的: 启动Cherry Studio.bat
+   运行根目录的: 启动Knowledge.bat
    ```
 
 4. **分享地址给同事**:
