@@ -492,6 +492,11 @@
                 <input type="text" id="messageInput" placeholder="输入您的问题..."
                     class="flex-1 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
                     onkeypress="if(event.key==='Enter') sendMessage()">
+                <button onclick="clearAllMessages()"
+                    class="bg-red-500 text-white px-4 py-3 rounded-lg hover:bg-red-600"
+                    title="清除所有聊天记录">
+                    🗑️ 清除
+                </button>
                 <button onclick="sendMessage()"
                     class="bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 disabled:bg-gray-300" id="sendBtn">
                     发送
@@ -962,6 +967,40 @@
             // 滚动到底部
             document.getElementById('chatContainer').scrollTop =
                 document.getElementById('chatContainer').scrollHeight;
+        }
+
+        // 清除所有聊天记录
+        function clearAllMessages() {
+            if (!confirm('确定要清除所有聊天记录吗？\n此操作不可恢复。')) {
+                return;
+            }
+            
+            const messagesDiv = document.getElementById('messages');
+            // 清空所有消息
+            messagesDiv.innerHTML = '';
+            
+            // 重新添加欢迎消息
+            const welcomeDiv = document.createElement('div');
+            welcomeDiv.className = 'bg-white p-4 rounded-lg shadow-sm';
+            welcomeDiv.innerHTML = `
+                <div class="markdown-content text-gray-600">
+                    <p>👋 <strong>您好!</strong> 我是 Knowledge AI 助手，有什么可以帮您的吗？</p>
+                </div>
+            `;
+            messagesDiv.appendChild(welcomeDiv);
+            
+            // 提示用户
+            const notification = document.createElement('div');
+            notification.className = 'bg-green-50 border border-green-200 p-3 rounded-lg text-sm text-green-800';
+            notification.innerHTML = '✅ 聊天记录已清除，可以开始新的对话了';
+            messagesDiv.appendChild(notification);
+            
+            // 3秒后移除提示
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+            
+            console.log('🗑️ 聊天记录已清除');
         }
 
         // 发送消息 (流式响应版本)
