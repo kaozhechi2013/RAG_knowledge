@@ -11,6 +11,10 @@
     <!-- 代码高亮库 -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github.min.css">
     <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/highlight.min.js"></script>
+    <!-- KaTeX 数学公式渲染 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
     <style>
         .message {
             animation: fadeIn 0.3s;
@@ -150,6 +154,238 @@
             border-top: 1px solid #e5e7eb;
             margin: 1.5em 0;
         }
+
+        /* 引用标注样式 - 模仿 Cherry Studio */
+        .citation {
+            display: inline-block;
+            background-color: #3b82f6;
+            color: white;
+            font-size: 0.7em;
+            font-weight: 600;
+            padding: 0.15em 0.5em;
+            border-radius: 0.3em;
+            margin: 0 0.15em;
+            cursor: pointer;
+            text-decoration: none;
+            vertical-align: super;
+            line-height: 1.2;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+
+        .citation:hover {
+            background-color: #2563eb;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+        }
+
+        .citation:active {
+            transform: translateY(0);
+        }
+
+        /* 引用弹窗 - 模仿 Cherry Studio */
+        .citation-tooltip {
+            position: fixed;
+            background: white;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            padding: 0;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+            max-width: 450px;
+            min-width: 300px;
+            z-index: 1000;
+            display: none;
+            overflow: hidden;
+        }
+
+        .citation-tooltip.show {
+            display: block;
+            animation: tooltipFadeIn 0.2s ease;
+        }
+
+        @keyframes tooltipFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-5px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .citation-tooltip-header {
+            background: #f9fafb;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .citation-tooltip-icon {
+            font-size: 1.2em;
+        }
+
+        .citation-title {
+            font-weight: 600;
+            color: #1f2937;
+            font-size: 0.9em;
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .citation-content {
+            color: #4b5563;
+            font-size: 0.85em;
+            line-height: 1.6;
+            max-height: 250px;
+            overflow-y: auto;
+            padding: 16px;
+            background: white;
+        }
+
+        .citation-content::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .citation-content::-webkit-scrollbar-track {
+            background: #f3f4f6;
+        }
+
+        .citation-content::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 3px;
+        }
+
+        .citation-url {
+            color: #3b82f6;
+            font-size: 0.75em;
+            padding: 10px 16px;
+            border-top: 1px solid #f3f4f6;
+            background: #fafbfc;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .citation-url:hover {
+            background: #f3f4f6;
+        }
+
+        .citation-badge {
+            display: inline-block;
+            background: #dbeafe;
+            color: #1e40af;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.75em;
+            font-weight: 600;
+        }
+
+        /* 引用列表样式 */
+        .citations-list {
+            padding: 16px;
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 0.9em;
+        }
+
+        .citations-list-title {
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .citation-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 12px;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .citation-item:hover {
+            background: #f3f4f6;
+            border-color: #3b82f6;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        .citation-item-number {
+            flex-shrink: 0;
+            width: 24px;
+            height: 24px;
+            background: #3b82f6;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+
+        .citation-item-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .citation-item-title {
+            font-weight: 500;
+            color: #1f2937;
+            margin-bottom: 4px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .citation-item-preview {
+            font-size: 0.85em;
+            color: #6b7280;
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .citation-item-meta {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 4px;
+            font-size: 0.75em;
+            color: #9ca3af;
+        }
+
+        .no-citations {
+            text-align: center;
+            color: #9ca3af;
+            padding: 16px;
+            font-size: 0.9em;
+        }
+
+        /* KaTeX 数学公式样式优化 */
+        .katex {
+            font-size: 1.1em;
+        }
+
+        .katex-display {
+            margin: 1em 0;
+            overflow-x: auto;
+            overflow-y: hidden;
+        }
     </style>
 </head>
 
@@ -166,15 +402,26 @@
     <!-- 设置面板 -->
     <div id="settings" class="hidden bg-white border-b p-4">
         <div class="max-w-2xl mx-auto space-y-4">
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">API 地址</label>
-                <input type="text" id="apiUrl" placeholder="http://192.168.1.100:8080"
-                    class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+            <div class="p-3 bg-green-50 border border-green-200 rounded-lg mb-4">
+                <p class="text-sm text-green-800">
+                    ✅ <strong>零配置模式</strong> - API Key 已内置，助手配置已预设，打开即用
+                </p>
+                <p class="text-xs text-green-700 mt-1">
+                    🔒 服务器已启用认证保护 | 📚 默认知识库：透明地质、工作总结、浑源可研等
+                </p>
             </div>
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">API Key</label>
-                <input type="password" id="apiKey" placeholder="your-api-key"
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                    API 地址 <span class="text-xs text-gray-500">(已自动检测)</span>
+                </label>
+                <input type="text" id="apiUrl" placeholder="http://10.216.186.24:8080"
                     class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                <p class="mt-1 text-xs text-gray-500">
+                    💡 系统自动检测：<br>
+                    • 管理员（本机）：http://localhost:8080<br>
+                    • 同事访问：http://10.216.186.24:8080<br>
+                    一般无需修改
+                </p>
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">选择模型</label>
@@ -187,10 +434,20 @@
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">
-                    📦 导入助手配置
+                    📦 更新助手配置（高级功能）
                 </label>
-                <textarea id="importConfig" rows="6" placeholder='在 Knowledge 桌面应用中:
-1. 右键点击助手
+                <textarea id="importConfig" rows="6" placeholder='✅ 系统已预设默认助手配置
+
+仅在以下情况需要重新导入：
+• 管理员修改了知识库的 Embedding 模型
+• 管理员修改了重排序模型配置
+• 需要切换到其他助手
+
+💡 注意：管理员新增/删除文档无需重新导入！
+文档变化会自动同步，下次提问即可搜索到新内容。
+
+导入步骤：
+1. 在 Knowledge 桌面应用中右键点击助手
 2. 选择 "导出Web端配置"
 3. 粘贴到这里
 4. 点击下方"导入配置"按钮'
@@ -199,13 +456,9 @@
                     class="mt-2 w-full bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600">
                     📥 导入配置
                 </button>
-                <div class="mt-2 p-3 bg-blue-50 rounded-lg">
-                    <p class="text-xs text-blue-800">
-                        <strong>💡 提示:</strong> 导入配置后,助手ID和知识库将自动设置,可直接开始对话!
-                    </p>
-                </div>
-                <!-- 隐藏字段用于存储助手ID -->
+                <!-- 隐藏字段用于存储助手ID和API Key（已废弃，保留兼容性） -->
                 <input type="hidden" id="assistantId">
+                <input type="hidden" id="apiKey">
             </div>
             <div class="flex gap-2">
                 <button onclick="saveSettings()"
@@ -222,11 +475,11 @@
 
     <!-- 聊天区域 -->
     <div class="flex-1 overflow-y-auto p-4" id="chatContainer">
-        <div class="max-w-3xl mx-auto space-y-4" id="messages">
+        <div class="mx-auto space-y-4" id="messages" style="max-width: 1200px; padding: 0 20px;">
             <!-- 欢迎消息 -->
             <div class="bg-white p-4 rounded-lg shadow-sm">
                 <div class="markdown-content text-gray-600">
-                    <p>👋 <strong>您好!</strong> 我是 Knowledge AI 助手,有什么可以帮您的吗?</p>
+                    <p>👋 <strong>您好!</strong> 我是 Knowledge AI 助手，有什么可以帮您的吗？</p>
                 </div>
             </div>
         </div>
@@ -234,7 +487,7 @@
 
     <!-- 输入区域 -->
     <div class="bg-white border-t p-4">
-        <div class="max-w-3xl mx-auto">
+        <div class="mx-auto" style="max-width: 1200px; padding: 0 20px;">
             <div class="flex gap-2">
                 <input type="text" id="messageInput" placeholder="输入您的问题..."
                     class="flex-1 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -249,29 +502,209 @@
 
     <script>
         // 配置
-        // 自动检测并使用服务器IP (如果是通过局域网IP访问的)
+        // 内部使用的固定 API Key（用户无需配置）
+        const INTERNAL_API_KEY = 'cs-sk-23b57a53-e400-4068-96c4-339bbb380554';
+        
+        // 默认助手配置（从桌面应用导出）
+        const DEFAULT_ASSISTANT_CONFIG = {
+            "assistantId": "b2491632-7f94-4656-816e-9bab0e7f442c",
+            "assistantName": "默认助手",
+            "knowledgeBases": [
+                {
+                    "id": "g_s0Ra6E9hJyzlTckLivx",
+                    "name": "测试",
+                    "model": {
+                        "id": "BAAI/bge-m3",
+                        "name": "BAAI/bge-m3",
+                        "provider": "silicon",
+                        "group": "BAAI"
+                    },
+                    "items": [
+                        {
+                            "id": "a69ef241-4c68-4812-8927-a2888daa2d33",
+                            "type": "file",
+                            "content": {
+                                "id": "9ae8aa7e-0172-41ba-9526-4dc32c2ccc37",
+                                "origin_name": "00透明地质平台操作指南V1.2.docx",
+                                "name": "9ae8aa7e-0172-41ba-9526-4dc32c2ccc37.docx",
+                                "path": "C:\\Users\\29193\\AppData\\Roaming\\knowledgeDev\\Data\\Files\\9ae8aa7e-0172-41ba-9526-4dc32c2ccc37.docx",
+                                "created_at": "2025-10-29T08:46:56.528Z",
+                                "size": 195787,
+                                "ext": ".docx",
+                                "type": "document",
+                                "count": 1
+                            },
+                            "created_at": 1761727616639,
+                            "updated_at": 1761727616639,
+                            "uniqueId": "LocalPathLoader_dbfb04ad5a1b5159dd6c91ff7959a903",
+                            "uniqueIds": [
+                                "LocalPathLoader_dbfb04ad5a1b5159dd6c91ff7959a903"
+                            ],
+                            "isPreprocessed": true
+                        },
+                        {
+                            "id": "ab5a2273-e271-4e07-bdac-495d2bb1b2d6",
+                            "type": "file",
+                            "content": {
+                                "id": "e868c123-a527-496e-9261-d272f6017053",
+                                "origin_name": "2025工作总结和展望—张伟杰.docx",
+                                "name": "e868c123-a527-496e-9261-d272f6017053.docx",
+                                "path": "C:\\Users\\29193\\AppData\\Roaming\\knowledgeDev\\Data\\Files\\e868c123-a527-496e-9261-d272f6017053.docx",
+                                "created_at": "2025-10-29T08:46:56.529Z",
+                                "size": 19036,
+                                "ext": ".docx",
+                                "type": "document",
+                                "count": 1
+                            },
+                            "created_at": 1761727616639,
+                            "updated_at": 1761727616639,
+                            "uniqueId": "LocalPathLoader_d5f24d6dcb6e0e5459a3b8f3320b695a",
+                            "uniqueIds": [
+                                "LocalPathLoader_d5f24d6dcb6e0e5459a3b8f3320b695a"
+                            ],
+                            "isPreprocessed": true
+                        },
+                        {
+                            "id": "50f93c4a-0cb6-4416-9deb-188d9938baf7",
+                            "type": "file",
+                            "content": {
+                                "id": "de39414c-e739-4ef4-8749-48d55ed5a556",
+                                "origin_name": "浑源可研.docx",
+                                "name": "de39414c-e739-4ef4-8749-48d55ed5a556.docx",
+                                "path": "C:\\Users\\29193\\AppData\\Roaming\\knowledgeDev\\Data\\Files\\de39414c-e739-4ef4-8749-48d55ed5a556.docx",
+                                "created_at": "2025-10-29T08:46:56.529Z",
+                                "size": 546890,
+                                "ext": ".docx",
+                                "type": "document",
+                                "count": 1
+                            },
+                            "created_at": 1761727616639,
+                            "updated_at": 1761727616639,
+                            "uniqueId": "LocalPathLoader_1ffe9afb0cef6b2acd2e2650fe116842",
+                            "uniqueIds": [
+                                "LocalPathLoader_1ffe9afb0cef6b2acd2e2650fe116842"
+                            ],
+                            "isPreprocessed": true
+                        },
+                        {
+                            "id": "2ebe4aa4-90b3-4bdc-b881-8a6ff26ff584",
+                            "type": "file",
+                            "content": {
+                                "id": "81c2f07c-1226-495f-8414-b4769a7ab912",
+                                "origin_name": "辽宁庄河抽水蓄能电站.docx",
+                                "name": "81c2f07c-1226-495f-8414-b4769a7ab912.docx",
+                                "path": "C:\\Users\\29193\\AppData\\Roaming\\knowledgeDev\\Data\\Files\\81c2f07c-1226-495f-8414-b4769a7ab912.docx",
+                                "created_at": "2025-10-29T08:46:56.530Z",
+                                "size": 803566,
+                                "ext": ".docx",
+                                "type": "document",
+                                "count": 1
+                            },
+                            "created_at": 1761727616639,
+                            "updated_at": 1761727616639,
+                            "uniqueId": "LocalPathLoader_547a33243163113357d90081e2189b9c",
+                            "uniqueIds": [
+                                "LocalPathLoader_547a33243163113357d90081e2189b9c"
+                            ],
+                            "isPreprocessed": true
+                        },
+                        {
+                            "id": "bbfa5ffb-f5e7-4547-a1c1-80b5f0414121",
+                            "type": "file",
+                            "content": {
+                                "id": "6fad2d07-6fe4-431c-a3b3-8c74946268ce",
+                                "origin_name": "数字工程所2025年研发计划.xlsx",
+                                "name": "6fad2d07-6fe4-431c-a3b3-8c74946268ce.xlsx",
+                                "path": "C:\\Users\\29193\\AppData\\Roaming\\knowledgeDev\\Data\\Files\\6fad2d07-6fe4-431c-a3b3-8c74946268ce.xlsx",
+                                "created_at": "2025-10-29T08:46:56.531Z",
+                                "size": 13334,
+                                "ext": ".xlsx",
+                                "type": "document",
+                                "count": 1
+                            },
+                            "created_at": 1761727616639,
+                            "updated_at": 1761727616639,
+                            "uniqueId": "LocalPathLoader_02c82d728865410929c9df6ac6171cfa",
+                            "uniqueIds": [
+                                "LocalPathLoader_02c82d728865410929c9df6ac6171cfa"
+                            ],
+                            "isPreprocessed": true
+                        }
+                    ],
+                    "created_at": 1761727605439,
+                    "updated_at": 1761727616640,
+                    "version": 1,
+                    "preprocessProvider": {
+                        "type": "preprocess",
+                        "provider": {
+                            "id": "mineru",
+                            "name": "MinerU",
+                            "apiKey": "",
+                            "apiHost": "https://mineru.net"
+                        }
+                    },
+                    "rerankModel": {
+                        "id": "BAAI/bge-reranker-v2-m3",
+                        "provider": "silicon",
+                        "name": "BAAI/bge-reranker-v2-m3",
+                        "group": "baai",
+                        "supported_text_delta": true
+                    }
+                }
+            ]
+        };
+        
+        // 智能 API 地址检测
         function getDefaultApiUrl() {
             const hostname = window.location.hostname;
-            // 如果通过IP访问,使用相同IP的8080端口
+            
+            // 如果是通过 10.216.186.24 访问，使用同样的 IP
+            if (hostname === '10.216.186.24') {
+                return 'http://10.216.186.24:8080';
+            }
+            
+            // 如果是通过其他局域网 IP 访问，使用该 IP
             if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
                 return `http://${hostname}:8080`;
             }
+            
+            // 本机访问，默认使用 localhost
             return 'http://localhost:8080';
         }
 
-        let config = {
-            apiUrl: localStorage.getItem('apiUrl') || getDefaultApiUrl(),
-            apiKey: localStorage.getItem('apiKey') || '',
-            model: localStorage.getItem('model') || 'gpt-4',
-            assistantId: localStorage.getItem('assistantId') || '',
-            knowledgeBases: JSON.parse(localStorage.getItem('knowledgeBases') || '[]')
-        };
+        // 初始化配置（首次访问时使用默认配置）
+        function initializeConfig() {
+            const isFirstVisit = !localStorage.getItem('configInitialized');
+            
+            if (isFirstVisit) {
+                // 首次访问，使用默认配置
+                console.log('🎉 首次访问，加载默认配置...');
+                console.log('📚 知识库数量:', DEFAULT_ASSISTANT_CONFIG.knowledgeBases.length);
+                console.log('📄 包含文档:', DEFAULT_ASSISTANT_CONFIG.knowledgeBases[0]?.items.map(item => item.content.origin_name));
+                localStorage.setItem('assistantId', DEFAULT_ASSISTANT_CONFIG.assistantId);
+                localStorage.setItem('knowledgeBases', JSON.stringify(DEFAULT_ASSISTANT_CONFIG.knowledgeBases));
+                localStorage.setItem('configInitialized', 'true');
+                console.log('✅ 默认配置已加载 - 无需手动配置，即可开始使用！');
+            } else {
+                console.log('ℹ️ 使用已保存的配置');
+            }
+            
+            const apiUrl = localStorage.getItem('apiUrl') || getDefaultApiUrl();
+            console.log('🌐 API 地址:', apiUrl);
+            
+            return {
+                apiUrl: apiUrl,
+                model: localStorage.getItem('model') || 'deepseek-chat',
+                assistantId: localStorage.getItem('assistantId') || DEFAULT_ASSISTANT_CONFIG.assistantId,
+                knowledgeBases: JSON.parse(localStorage.getItem('knowledgeBases') || JSON.stringify(DEFAULT_ASSISTANT_CONFIG.knowledgeBases))
+            };
+        }
 
+        let config = initializeConfig();
         let availableModels = [];
 
         // 初始化
         document.getElementById('apiUrl').value = config.apiUrl;
-        document.getElementById('apiKey').value = config.apiKey;
         document.getElementById('assistantId').value = config.assistantId;
         updateStatus();
         refreshModels();
@@ -329,11 +762,10 @@
         async function refreshModels() {
             // 读取输入框的当前值
             const apiUrl = document.getElementById('apiUrl').value.trim();
-            const apiKey = document.getElementById('apiKey').value.trim();
 
-            if (!apiUrl || !apiKey) {
+            if (!apiUrl) {
                 const selectEl = document.getElementById('modelSelect');
-                selectEl.innerHTML = '<option value="">⚠️ 请先填写 API 地址和 Key</option>';
+                selectEl.innerHTML = '<option value="">⚠️ 请先填写 API 地址</option>';
                 return;
             }
 
@@ -343,7 +775,7 @@
             try {
                 const response = await fetch(`${apiUrl}/v1/models`, {
                     headers: {
-                        'Authorization': `Bearer ${apiKey}`
+                        'Authorization': `Bearer ${INTERNAL_API_KEY}`
                     }
                 });
 
@@ -371,10 +803,11 @@
                     selectEl.appendChild(option);
                 });
 
-                // 如果当前选择的模型不在列表中，选择第一个
-                if (!availableModels.find(m => m.id === config.model)) {
+                // 如果当前没有保存的模型，或保存的模型不在列表中，自动选择第一个（通常是置顶的模型）
+                if (!config.model || !availableModels.find(m => m.id === config.model)) {
                     config.model = availableModels[0].id;
                     selectEl.value = config.model;
+                    console.log('🎯 自动选择模型:', config.model);
                 }
 
             } catch (error) {
@@ -387,7 +820,6 @@
         async function testConnection() {
             // 读取输入框的当前值,而不是已保存的 config
             const apiUrl = document.getElementById('apiUrl').value.trim();
-            const apiKey = document.getElementById('apiKey').value.trim();
 
             if (!apiUrl) {
                 alert('❌ 请先填写 API 地址');
@@ -397,7 +829,7 @@
             try {
                 const response = await fetch(`${apiUrl}/v1/models`, {
                     headers: {
-                        'Authorization': `Bearer ${apiKey}`
+                        'Authorization': `Bearer ${INTERNAL_API_KEY}`
                     }
                 });
 
@@ -420,7 +852,6 @@
         // 保存设置
         function saveSettings() {
             config.apiUrl = document.getElementById('apiUrl').value;
-            config.apiKey = document.getElementById('apiKey').value;
             config.assistantId = document.getElementById('assistantId').value.trim();
             const selectedModel = document.getElementById('modelSelect').value;
             if (selectedModel) {
@@ -428,7 +859,6 @@
             }
 
             localStorage.setItem('apiUrl', config.apiUrl);
-            localStorage.setItem('apiKey', config.apiKey);
             localStorage.setItem('model', config.model);
             localStorage.setItem('assistantId', config.assistantId);
             localStorage.setItem('knowledgeBases', JSON.stringify(config.knowledgeBases || []));
@@ -457,7 +887,7 @@
             try {
                 const response = await fetch(`${config.apiUrl}/v1/models`, {
                     headers: {
-                        'Authorization': `Bearer ${config.apiKey}`
+                        'Authorization': `Bearer ${INTERNAL_API_KEY}`
                     }
                 });
                 if (response.ok) {
@@ -476,14 +906,14 @@
         }
 
         // 添加消息到界面
-        function addMessage(content, isUser = false) {
+        function addMessage(content, isUser = false, citations = null) {
             const messagesDiv = document.getElementById('messages');
             const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${isUser ? 'text-right' : ''}`;
+            messageDiv.className = isUser ? 'text-right' : '';
 
             const bubble = document.createElement('div');
-            bubble.className = `inline-block max-w-xl p-4 rounded-lg ${isUser
-                    ? 'bg-blue-500 text-white'
+            bubble.className = `p-4 rounded-lg ${isUser
+                    ? 'inline-block bg-blue-500 text-white max-w-xl ml-auto'
                     : 'bg-white shadow-sm text-gray-800'
                 }`;
             
@@ -506,9 +936,27 @@
                     }
                 });
                 bubble.innerHTML = marked.parse(content);
+                // 渲染数学公式和引用
+                renderMathAndCitations(bubble);
             }
 
             messageDiv.appendChild(bubble);
+            
+            // 如果有引用数据,先过滤相似度低于 50% 的引用,然后将引用列表作为独立元素添加(AI消息才有引用)
+            if (!isUser && citations && citations.length > 0) {
+                // 过滤相似度低于 50% 的引用
+                const filteredCitations = citations.filter(c => {
+                    if (c.score === undefined) return true;
+                    return c.score >= 0.5;
+                });
+                
+                if (filteredCitations.length > 0) {
+                    const citationsList = createCitationsList(filteredCitations);
+                    citationsList.style.marginTop = '8px'; // 与消息气泡保持间距
+                    messageDiv.appendChild(citationsList);
+                }
+            }
+            
             messagesDiv.appendChild(messageDiv);
 
             // 滚动到底部
@@ -542,10 +990,10 @@
             // 创建 AI 回复容器
             const messagesDiv = document.getElementById('messages');
             const messageDiv = document.createElement('div');
-            messageDiv.className = 'message';
+            messageDiv.className = '';
 
             const bubble = document.createElement('div');
-            bubble.className = 'inline-block max-w-xl p-4 rounded-lg bg-white shadow-sm text-gray-800 markdown-content';
+            bubble.className = 'p-4 rounded-lg bg-white shadow-sm text-gray-800 markdown-content';
             bubble.id = 'streaming-message';
             
             // 根据是否使用知识库显示不同的加载提示
@@ -597,13 +1045,14 @@
                 const startTime = Date.now();
                 let firstTokenTime = null;
                 let fullContent = '';
+                let citations = []; // 收集引用数据
 
                 // 调用 API (流式)
                 const response = await fetch(`${config.apiUrl}/v1/chat/completions`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${config.apiKey}`
+                        'Authorization': `Bearer ${INTERNAL_API_KEY}`
                     },
                     body: JSON.stringify(requestBody)
                 });
@@ -655,7 +1104,22 @@
                                     
                                     // 实时渲染 Markdown
                                     bubble.innerHTML = marked.parse(fullContent);
+                                    // 渲染数学公式和引用
+                                    renderMathAndCitations(bubble);
                                     scrollToBottom();
+                                }
+                                
+                                // 提取引用数据 (如果有)
+                                if (data.choices && data.choices[0]?.message?.citations) {
+                                    // 过滤相似度低于 50% 的引用
+                                    const allCitations = data.choices[0].message.citations;
+                                    citations = allCitations.filter(c => {
+                                        // 如果没有 score 字段，保留该引用
+                                        if (c.score === undefined) return true;
+                                        // 只保留相似度 >= 0.5 (50%) 的引用
+                                        return c.score >= 0.5;
+                                    });
+                                    console.log(`📚 收到引用数据: ${allCitations.length} 个，过滤后: ${citations.length} 个 (>= 50%)`);
                                 }
                             } catch (e) {
                                 // 忽略解析错误，继续处理下一行
@@ -674,10 +1138,18 @@
                 console.log(`⚡ 首个 token: ${((firstTokenTime - startTime) / 1000).toFixed(2)} 秒`);
                 console.log(`✍️ 生成时间: ${generationTime} 秒`);
                 console.log(`📝 内容长度: ${fullContent.length} 字符`);
+                console.log(`📚 引用数量: ${citations.length}`);
                 console.groupEnd();
 
                 // 移除临时 ID
                 bubble.removeAttribute('id');
+
+                // 添加引用列表(如果有引用数据)
+                if (citations && citations.length > 0) {
+                    const citationsList = createCitationsList(citations);
+                    citationsList.style.marginTop = '8px'; // 与消息气泡保持间距
+                    messageDiv.appendChild(citationsList);
+                }
 
             } catch (error) {
                 console.error('发送消息失败:', error);
@@ -698,6 +1170,298 @@
                 sendBtn.disabled = false;
                 input.focus();
             }
+        }
+
+        // 创建引用列表
+        function createCitationsList(citations) {
+            const container = document.createElement('div');
+            container.className = 'citations-list';
+            
+            const title = document.createElement('div');
+            title.className = 'citations-list-title';
+            title.innerHTML = `
+                <span>📚</span>
+                <span>引用来源 (${citations.length})</span>
+            `;
+            container.appendChild(title);
+            
+            // 创建网格容器
+            const grid = document.createElement('div');
+            grid.style.cssText = `
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+                gap: 12px;
+            `;
+            
+            citations.forEach((citation, index) => {
+                const item = document.createElement('div');
+                item.className = 'citation-item';
+                item.onclick = () => showCitationDetailTooltip(citation, index + 1);
+                
+                const number = document.createElement('div');
+                number.className = 'citation-item-number';
+                number.textContent = index + 1;
+                
+                const content = document.createElement('div');
+                content.className = 'citation-item-content';
+                
+                const itemTitle = document.createElement('div');
+                itemTitle.className = 'citation-item-title';
+                itemTitle.textContent = citation.title || citation.url || `引用 ${index + 1}`;
+                
+                const preview = document.createElement('div');
+                preview.className = 'citation-item-preview';
+                preview.textContent = citation.content || '点击查看详情...';
+                
+                const meta = document.createElement('div');
+                meta.className = 'citation-item-meta';
+                
+                // 添加元数据
+                if (citation.type) {
+                    const typeSpan = document.createElement('span');
+                    typeSpan.textContent = citation.type === 'knowledge' ? '📄 知识库' : 
+                                          citation.type === 'websearch' ? '🔍 网络搜索' : '💾 记忆';
+                    meta.appendChild(typeSpan);
+                }
+                
+                if (citation.score !== undefined) {
+                    const scoreSpan = document.createElement('span');
+                    scoreSpan.textContent = `相似度: ${(citation.score * 100).toFixed(1)}%`;
+                    meta.appendChild(scoreSpan);
+                }
+                
+                content.appendChild(itemTitle);
+                content.appendChild(preview);
+                if (meta.children.length > 0) {
+                    content.appendChild(meta);
+                }
+                
+                item.appendChild(number);
+                item.appendChild(content);
+                grid.appendChild(item);
+            });
+            
+            container.appendChild(grid);
+            return container;
+        }
+
+        // 显示引用详细信息弹窗
+        function showCitationDetailTooltip(citation, number) {
+            // 移除已存在的弹窗
+            if (currentTooltip) {
+                currentTooltip.remove();
+            }
+
+            const tooltip = document.createElement('div');
+            tooltip.className = 'citation-tooltip show';
+            
+            tooltip.innerHTML = `
+                <div class="citation-tooltip-header">
+                    <span class="citation-tooltip-icon">${citation.type === 'knowledge' ? '📄' : '🔍'}</span>
+                    <div class="citation-title">${citation.title || `引用 ${number}`}</div>
+                    <span class="citation-badge">引用 ${number}</span>
+                </div>
+                <div class="citation-content">
+                    ${citation.content || '无内容预览'}
+                </div>
+                <div class="citation-url">
+                    <span>${citation.type === 'knowledge' ? '📑' : '🌐'}</span>
+                    <span>${citation.url || citation.title || '来源: 知识库'}</span>
+                </div>
+            `;
+            
+            // 居中显示
+            tooltip.style.left = '50%';
+            tooltip.style.top = '50%';
+            tooltip.style.transform = 'translate(-50%, -50%)';
+            
+            // 点击弹窗外关闭
+            setTimeout(() => {
+                document.addEventListener('click', function closeTooltip(e) {
+                    if (!tooltip.contains(e.target)) {
+                        tooltip.remove();
+                        currentTooltip = null;
+                        document.removeEventListener('click', closeTooltip);
+                    }
+                });
+            }, 10);
+            
+            document.body.appendChild(tooltip);
+            currentTooltip = tooltip;
+        }
+
+        // 渲染数学公式和引用标注
+        function renderMathAndCitations(element) {
+            // 1. 渲染 KaTeX 数学公式
+            if (window.renderMathInElement) {
+                try {
+                    renderMathInElement(element, {
+                        delimiters: [
+                            {left: '$$', right: '$$', display: true},
+                            {left: '$', right: '$', display: false},
+                            {left: '\\[', right: '\\]', display: true},
+                            {left: '\\(', right: '\\)', display: false}
+                        ],
+                        throwOnError: false,
+                        errorColor: '#cc0000',
+                        strict: false
+                    });
+                } catch (e) {
+                    console.warn('KaTeX 渲染失败:', e);
+                }
+            }
+
+            // 2. 处理引用标注 [cite:N] 或 [N]
+            processCitations(element);
+        }
+
+        // 处理引用标注
+        function processCitations(element) {
+            // 查找所有引用标记: [cite:1], [1], [2] 等
+            const citationRegex = /\[(?:cite:)?(\d+)\]/g;
+            
+            // 遍历所有文本节点
+            const walker = document.createTreeWalker(
+                element,
+                NodeFilter.SHOW_TEXT,
+                {
+                    acceptNode: function(node) {
+                        // 跳过 code 和 pre 标签内的文本
+                        if (node.parentElement.tagName === 'CODE' || 
+                            node.parentElement.tagName === 'PRE') {
+                            return NodeFilter.FILTER_REJECT;
+                        }
+                        return citationRegex.test(node.textContent) ? 
+                            NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+                    }
+                }
+            );
+
+            const textNodes = [];
+            while (walker.nextNode()) {
+                textNodes.push(walker.currentNode);
+            }
+
+            // 替换文本节点中的引用标记
+            textNodes.forEach(node => {
+                const parent = node.parentElement;
+                const text = node.textContent;
+                const fragment = document.createDocumentFragment();
+                
+                let lastIndex = 0;
+                let match;
+                citationRegex.lastIndex = 0; // 重置正则
+                
+                while ((match = citationRegex.exec(text)) !== null) {
+                    const citationNum = match[1];
+                    
+                    // 添加引用前的文本
+                    if (match.index > lastIndex) {
+                        fragment.appendChild(
+                            document.createTextNode(text.slice(lastIndex, match.index))
+                        );
+                    }
+                    
+                    // 创建引用标签
+                    const citation = document.createElement('span');
+                    citation.className = 'citation';
+                    citation.textContent = citationNum;
+                    citation.dataset.citationId = citationNum;
+                    citation.title = `点击查看引用 #${citationNum}`;
+                    
+                    // 添加点击事件
+                    citation.addEventListener('click', function(e) {
+                        showCitationTooltip(e, citationNum);
+                    });
+                    
+                    fragment.appendChild(citation);
+                    lastIndex = match.index + match[0].length;
+                }
+                
+                // 添加剩余文本
+                if (lastIndex < text.length) {
+                    fragment.appendChild(document.createTextNode(text.slice(lastIndex)));
+                }
+                
+                // 替换原文本节点
+                if (fragment.childNodes.length > 0) {
+                    parent.replaceChild(fragment, node);
+                }
+            });
+        }
+
+        // 显示引用弹窗
+        let currentTooltip = null;
+        function showCitationTooltip(event, citationId) {
+            // 移除已存在的弹窗
+            if (currentTooltip) {
+                currentTooltip.remove();
+            }
+
+            // 创建弹窗
+            const tooltip = document.createElement('div');
+            tooltip.className = 'citation-tooltip show';
+            
+            // 这里可以从 API 响应中获取真实的引用信息
+            // 目前显示占位信息
+            tooltip.innerHTML = `
+                <div class="citation-tooltip-header">
+                    <span class="citation-tooltip-icon">📄</span>
+                    <div class="citation-title">知识库引用 #${citationId}</div>
+                    <span class="citation-badge">引用 ${citationId}</span>
+                </div>
+                <div class="citation-content">
+                    <p><strong>正在加载引用内容...</strong></p>
+                    <p style="margin-top: 8px; color: #9ca3af; font-size: 0.9em;">
+                        💡 <em>实际引用信息将从知识库检索结果中提取</em>
+                    </p>
+                    <p style="margin-top: 8px; color: #6b7280;">
+                        该引用来自知识库文档,包含相关段落内容和上下文信息。
+                        当 API 返回 citations 数据时,这里将显示具体的引用片段。
+                    </p>
+                </div>
+                <div class="citation-url">
+                    <span>📑</span>
+                    <span>来源: 知识库文档</span>
+                </div>
+            `;
+            
+            // 定位弹窗
+            const rect = event.target.getBoundingClientRect();
+            const tooltipWidth = 400; // 预估宽度
+            
+            // 计算水平位置 (优先右侧,不够则左侧)
+            let left = rect.left;
+            if (left + tooltipWidth > window.innerWidth) {
+                left = Math.max(10, window.innerWidth - tooltipWidth - 10);
+            }
+            
+            // 计算垂直位置 (优先下方,不够则上方)
+            let top = rect.bottom + 8;
+            if (top + 300 > window.innerHeight) {
+                top = rect.top - 8;
+                tooltip.style.transform = 'translateY(-100%)';
+            }
+            
+            tooltip.style.left = `${left}px`;
+            tooltip.style.top = `${top}px`;
+            
+            // 点击弹窗外关闭
+            setTimeout(() => {
+                document.addEventListener('click', function closeTooltip(e) {
+                    if (!tooltip.contains(e.target)) {
+                        tooltip.remove();
+                        currentTooltip = null;
+                        document.removeEventListener('click', closeTooltip);
+                    }
+                });
+            }, 10);
+            
+            document.body.appendChild(tooltip);
+            currentTooltip = tooltip;
+
+            // 防止立即触发关闭
+            event.stopPropagation();
         }
 
         // 定期检查连接状态

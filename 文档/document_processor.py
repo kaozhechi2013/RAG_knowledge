@@ -257,22 +257,45 @@ def main():
     parser = argparse.ArgumentParser(description='Word文档图片清理工具')
     parser.add_argument('path', help='要处理的文件或目录路径')
     parser.add_argument('--no-backup', action='store_true', help='不创建备份文件')
+    parser.add_argument('--silent', action='store_true', help='静默模式，减少输出')
+    parser.add_argument('--remove-backup', action='store_true', help='处理成功后删除备份文件')
     
     args = parser.parse_args()
     
     processor = WordDocumentProcessor()
     
-    if os.path.isfile(args.path):
-        # 处理单个文件
-        if processor.is_word_document(args.path):
-            processor.process_single_file(args.path, not args.no_backup)
+    try:
+        if os.path.isfile(args.path):
+            # 处理单个文件
+            if processor.is_word_document(args.path):
+                success, original_size, new_size = processor.process_single_file(
+                    args.path, 
+                    not args.no_backup
+                )
+                
+                # 如果成功且需要删除备份
+                if success and args.remove_backup and not args.no_backup:
+                    backup_path = args.path + '.backup'
+                    if os.path.exists(backup_path):
+                        os.remove(backup_path)
+                        if not args.silent:
+                            print(f"  已删除备份文件: {backup_path}")
+                
+                # 返回退出码：0=成功，1=失败
+                exit(0 if success else 1)
+            else:
+                print(f"错误: 不是支持的Word文档格式 - {args.path}")
+                exit(1)
+        elif os.path.isdir(args.path):
+            # 处理目录
+            processor.process_directory(args.path, not args.no_backup)
+            exit(0)
         else:
-            print(f"错误: 不是支持的Word文档格式 - {args.path}")
-    elif os.path.isdir(args.path):
-        # 处理目录
-        processor.process_directory(args.path, not args.no_backup)
-    else:
-        print(f"错误: 路径不存在 - {args.path}")
+            print(f"错误: 路径不存在 - {args.path}")
+            exit(1)
+    except Exception as e:
+        print(f"错误: 处理过程中发生异常 - {str(e)}")
+        exit(1)
 
 
 if __name__ == "__main__":

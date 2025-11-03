@@ -20,6 +20,36 @@ type ExtendedChatCompletionRequest = ChatCompletionCreateParams & {
 const router = express.Router();
 
 /**
+ * Extract original filename from knowledge base items by matching file ID
+ * @param knowledgeBases - Knowledge base configurations
+ * @param fileId - File ID (GUID) from metadata.source
+ * @returns Original filename or null
+ */
+function getOriginalFileName(
+	knowledgeBases: KnowledgeBase[] | undefined,
+	fileId: string,
+): string | null {
+	if (!knowledgeBases) return null;
+
+	for (const base of knowledgeBases) {
+		if (!base.items) continue;
+
+		for (const item of base.items) {
+			// Check file type items
+			if (item.type === "file" && typeof item.content === "object") {
+				const fileContent = item.content as any;
+				// Match by file ID
+				if (fileContent.id === fileId || fileContent.name?.includes(fileId)) {
+					return fileContent.origin_name || fileContent.name;
+				}
+			}
+		}
+	}
+
+	return null;
+}
+
+/**
  * @swagger
  * /v1/chat/completions:
  *   post:
@@ -223,6 +253,10 @@ router.post("/completions", async (req: Request, res: Response) => {
 					});
 					// Prepend knowledge context to the user message
 					userMessage.content = knowledgeContext + userMessage.content;
+
+					// Store search results for later use in citations
+					(request as any).knowledgeSearchResults = searchResults;
+
 					logger.info(
 						`✅ Injected ${searchResults.length} knowledge base results into context`,
 					);
@@ -253,7 +287,61 @@ router.post("/completions", async (req: Request, res: Response) => {
 			res.setHeader("Connection", "keep-alive");
 
 			try {
+				let isFirstChunk = true;
 				for await (const chunk of streamResponse as any) {
+					// Inject citations into the first chunk
+					if (isFirstChunk && (request as any).knowledgeSearchResults) {
+						const searchResults = (request as any).knowledgeSearchResults;
+
+						const citations = searchResults.map(
+							(result: any, index: number) => {
+								// Extract filename from source path
+								let title = `文档${index + 1}`;
+								if (result.metadata?.source) {
+									const parts = result.metadata.source.split(/[/\\]/);
+									const guidFilename = parts[parts.length - 1];
+
+									// Extract file ID (GUID) from filename like "abc-123-xyz.pdf"
+									const fileId = guidFilename.split(".")[0];
+
+									// Try to find original filename from knowledge base items
+									const originalName = getOriginalFileName(
+										request.knowledge_bases,
+										fileId,
+									);
+
+									if (originalName) {
+										title = originalName;
+									} else if (guidFilename) {
+										// Fallback to GUID filename if origin_name not found
+										title = guidFilename;
+									}
+								}
+
+								return {
+									id: index + 1,
+									type: "knowledge",
+									title: title,
+									content: result.pageContent || "",
+									score: result.score || 0,
+									url: result.metadata?.source || "",
+								};
+							},
+						);
+
+						// Add citations to the first chunk
+						if (chunk.choices && chunk.choices[0]) {
+							if (!chunk.choices[0].message) {
+								chunk.choices[0].message = {};
+							}
+							chunk.choices[0].message.citations = citations;
+						}
+						isFirstChunk = false;
+						logger.info(
+							`📚 Injected ${citations.length} citations into stream response`,
+						);
+					}
+
 					res.write(`data: ${JSON.stringify(chunk)}\n\n`);
 				}
 				res.write("data: [DONE]\n\n");
@@ -276,6 +364,53 @@ router.post("/completions", async (req: Request, res: Response) => {
 
 		// Handle non-streaming
 		const response = await client.chat.completions.create(request);
+
+		// Inject citations into non-streaming response
+		if ((request as any).knowledgeSearchResults) {
+			const searchResults = (request as any).knowledgeSearchResults;
+
+			const citations = searchResults.map((result: any, index: number) => {
+				// Extract filename from source path
+				let title = `文档${index + 1}`;
+				if (result.metadata?.source) {
+					const parts = result.metadata.source.split(/[/\\]/);
+					const guidFilename = parts[parts.length - 1];
+
+					// Extract file ID (GUID) from filename like "abc-123-xyz.pdf"
+					const fileId = guidFilename.split(".")[0];
+
+					// Try to find original filename from knowledge base items
+					const originalName = getOriginalFileName(
+						request.knowledge_bases,
+						fileId,
+					);
+
+					if (originalName) {
+						title = originalName;
+					} else if (guidFilename) {
+						// Fallback to GUID filename if origin_name not found
+						title = guidFilename;
+					}
+				}
+
+				return {
+					id: index + 1,
+					type: "knowledge",
+					title: title,
+					content: result.pageContent || "",
+					score: result.score || 0,
+					url: result.metadata?.source || "",
+				};
+			});
+
+			if (response.choices && response.choices[0]?.message) {
+				(response.choices[0].message as any).citations = citations;
+			}
+			logger.info(
+				`📚 Injected ${citations.length} citations into non-streaming response`,
+			);
+		}
+
 		return res.json(response);
 	} catch (error: any) {
 		logger.error("Chat completion error:", error);
