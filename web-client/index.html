@@ -1128,22 +1128,32 @@
             }
         }
 
-        // 智能API地址检测
+        // 智能API地址检测 - 自动适配任何部署环境
         function getDefaultApiUrl() {
             const hostname = window.location.hostname;
-            if (hostname === '10.216.186.24') {
-                return 'http://10.216.186.24:8080';
-            }
-            if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
-                return `http://${hostname}:8080`;
-            }
-            return 'http://localhost:8080';
+            const protocol = window.location.protocol;
+            
+            // 自动使用当前访问的主机地址
+            // 无论是localhost、局域网IP还是域名都能自动适配
+            return `${protocol}//${hostname}:8080`;
         }
 
         // 加载配置
         function loadConfig() {
-            config.apiUrl = localStorage.getItem('apiUrl') || getDefaultApiUrl();
-            config.model = localStorage.getItem('model') || 'deepseek-chat';
+            // 如果没有保存过配置，使用智能检测的地址
+            const savedApiUrl = localStorage.getItem('apiUrl');
+            const defaultUrl = getDefaultApiUrl();
+            
+            // 优先使用保存的地址，但如果主机名变了，自动更新
+            if (!savedApiUrl || savedApiUrl.includes('localhost') !== defaultUrl.includes('localhost')) {
+                config.apiUrl = defaultUrl;
+                localStorage.setItem('apiUrl', defaultUrl);
+            } else {
+                config.apiUrl = savedApiUrl;
+            }
+            
+            // 默认使用千问3 8B模型
+            config.model = localStorage.getItem('model') || 'Qwen/Qwen2.5-Coder-32B-Instruct';
             config.assistantId = localStorage.getItem('assistantId') || '';
             
             try {
@@ -1153,6 +1163,12 @@
             }
             
             document.getElementById('apiUrlInput').value = config.apiUrl;
+            
+            console.log('🔧 配置加载完成:', {
+                apiUrl: config.apiUrl,
+                model: config.model,
+                autoDetected: !savedApiUrl || savedApiUrl !== config.apiUrl
+            });
         }
 
         // 保存配置
@@ -1800,18 +1816,56 @@
                 }
                 
                 select.innerHTML = '';
+                
+                // 优先级模型列表（按顺序尝试）
+                const preferredModels = [
+                    'Qwen/Qwen2.5-Coder-32B-Instruct',  // 千问3 8B
+                    'qwen',  // 其他千问模型
+                    'Qwen'
+                ];
+                
+                let defaultModel = null;
+                
+                // 查找首选模型
+                if (!config.model || config.model === 'deepseek-chat') {
+                    for (const preferred of preferredModels) {
+                        const found = models.find(m => 
+                            m.id.toLowerCase().includes(preferred.toLowerCase())
+                        );
+                        if (found) {
+                            defaultModel = found.id;
+                            break;
+                        }
+                    }
+                    // 如果没找到首选模型，使用第一个
+                    if (!defaultModel && models.length > 0) {
+                        defaultModel = models[0].id;
+                    }
+                }
+                
                 models.forEach(model => {
                     const option = document.createElement('option');
                     option.value = model.id;
                     option.textContent = `${model.id} (${model.owned_by || 'unknown'})`;
-                    if (model.id === config.model) option.selected = true;
+                    
+                    // 选择逻辑：已保存的配置 > 默认模型 > 第一个
+                    if (config.model && model.id === config.model) {
+                        option.selected = true;
+                    } else if (!config.model && defaultModel && model.id === defaultModel) {
+                        option.selected = true;
+                        config.model = defaultModel;
+                        saveConfig();
+                    }
+                    
                     select.appendChild(option);
                 });
                 
-                if (!config.model && models.length > 0) {
-                    config.model = models[0].id;
-                    select.value = config.model;
-                }
+                console.log('📋 模型列表加载完成:', {
+                    total: models.length,
+                    selected: config.model,
+                    wasAutoSelected: !!defaultModel
+                });
+                
             } catch (error) {
                 console.error('加载模型失败:', error);
                 select.innerHTML = '<option value="">❌ 加载失败</option>';
