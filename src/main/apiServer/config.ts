@@ -1,5 +1,4 @@
 import type { ApiServerConfig } from "@types";
-import { v4 as uuidv4 } from "uuid";
 
 import { loggerService } from "../services/LoggerService";
 import { reduxService } from "../services/ReduxService";
@@ -8,21 +7,25 @@ const logger = loggerService.withContext("ApiServerConfig");
 
 const defaultHost = "0.0.0.0"; // 允许局域网访问
 const defaultPort = 23333;
+const FIXED_API_KEY = "sk-knowledge-internal-2024"; // 固定的 API Key
 
 class ConfigManager {
 	private _config: ApiServerConfig | null = null;
 
 	private generateApiKey(): string {
-		return `cs-sk-${uuidv4()}`;
+		// 优先使用环境变量，其次使用固定 Key
+		return process.env.KNOWLEDGE_API_KEY || FIXED_API_KEY;
 	}
 
 	async load(): Promise<ApiServerConfig> {
 		try {
 			const settings = await reduxService.select("state.settings");
 			const serverSettings = settings?.apiServer;
-			let apiKey = serverSettings?.apiKey;
-			if (!apiKey || apiKey.trim() === "") {
-				apiKey = this.generateApiKey();
+			// 始终使用固定的 API Key
+			const apiKey = this.generateApiKey();
+
+			// 更新到 Redux 以保持一致性
+			if (serverSettings?.apiKey !== apiKey) {
 				await reduxService.dispatch({
 					type: "settings/setApiServerApiKey",
 					payload: apiKey,

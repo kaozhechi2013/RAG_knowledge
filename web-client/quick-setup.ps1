@@ -12,9 +12,9 @@ Write-Host ""
 $localIP = (Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -notlike "127.*" -and $_.IPAddress -notlike "169.*" } | Select-Object -First 1).IPAddress
 
 if (-not $localIP) {
-    Write-Host "[ERROR] Cannot find local IP address" -ForegroundColor Red
-    pause
-    exit 1
+  Write-Host "[ERROR] Cannot find local IP address" -ForegroundColor Red
+  pause
+  exit 1
 }
 
 Write-Host "[INFO] Your IP address: $localIP" -ForegroundColor Green
@@ -24,23 +24,23 @@ Write-Host ""
 $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 
 if (-not $isAdmin) {
-    Write-Host "[WARNING] Not running as administrator" -ForegroundColor Yellow
-    Write-Host "Firewall rules will be configured when you run setup-firewall.bat" -ForegroundColor Yellow
-    Write-Host ""
+  Write-Host "[WARNING] Not running as administrator" -ForegroundColor Yellow
+  Write-Host "Firewall rules will be configured when you run setup-firewall.bat" -ForegroundColor Yellow
+  Write-Host ""
 }
 else {
-    Write-Host "[1/2] Configuring firewall..." -ForegroundColor Cyan
+  Write-Host "[1/2] Configuring firewall..." -ForegroundColor Cyan
     
-    # Remove old rules
-    netsh advfirewall firewall delete rule name="Knowledge Web Client (8081)" 2>$null | Out-Null
-    netsh advfirewall firewall delete rule name="Knowledge API Server (8080)" 2>$null | Out-Null
+  # Remove old rules
+  netsh advfirewall firewall delete rule name="Knowledge Web Client (8081)" 2>$null | Out-Null
+  netsh advfirewall firewall delete rule name="Knowledge API Server (8080)" 2>$null | Out-Null
     
-    # Add new rules
-    netsh advfirewall firewall add rule name="Knowledge Web Client (8081)" dir=in action=allow protocol=TCP localport=8081 | Out-Null
-    netsh advfirewall firewall add rule name="Knowledge API Server (8080)" dir=in action=allow protocol=TCP localport=8080 | Out-Null
+  # Add new rules
+  netsh advfirewall firewall add rule name="Knowledge Web Client (8081)" dir=in action=allow protocol=TCP localport=8081 | Out-Null
+  netsh advfirewall firewall add rule name="Knowledge API Server (8080)" dir=in action=allow protocol=TCP localport=8080 | Out-Null
     
-    Write-Host "[OK] Firewall configured" -ForegroundColor Green
-    Write-Host ""
+  Write-Host "[OK] Firewall configured" -ForegroundColor Green
+  Write-Host ""
 }
 
 Write-Host "[2/2] Creating configuration info..." -ForegroundColor Cyan
@@ -92,8 +92,8 @@ Write-Host "  4. Share the info above with colleagues" -ForegroundColor White
 Write-Host ""
 
 if (-not $isAdmin) {
-    Write-Host "[!] Remember to run setup-firewall.bat as administrator!" -ForegroundColor Yellow
-    Write-Host ""
+  Write-Host "[!] Remember to run setup-firewall.bat as administrator!" -ForegroundColor Yellow
+  Write-Host ""
 }
 
 pause

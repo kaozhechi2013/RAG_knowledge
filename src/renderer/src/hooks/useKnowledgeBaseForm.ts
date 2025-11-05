@@ -82,11 +82,30 @@ export const useKnowledgeBaseForm = (base?: KnowledgeBase) => {
 
 	const handleEmbeddingModelChange = useCallback(
 		(value: string) => {
-			const model = providers
-				.flatMap((p) => p.models)
-				.find((m) => getModelUniqId(m) === value);
+			console.log(
+				"[DEBUG] handleEmbeddingModelChange called with value:",
+				value,
+			);
+			const allModels = providers.flatMap((p) => p.models);
+			console.log("[DEBUG] Total models available:", allModels.length);
+			const model = allModels.find((m) => getModelUniqId(m) === value);
+			console.log(
+				"[DEBUG] Found model:",
+				model
+					? JSON.stringify({
+							id: model.id,
+							name: model.name,
+							provider: model.provider,
+						})
+					: "NOT FOUND",
+			);
 			if (model) {
-				setNewBase((prev) => ({ ...prev, model }));
+				setNewBase((prev) => {
+					console.log("[DEBUG] Setting newBase with model");
+					return { ...prev, model };
+				});
+			} else {
+				console.warn("[WARN] No model found for value:", value);
 			}
 		},
 		[providers],

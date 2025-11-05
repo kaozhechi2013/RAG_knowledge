@@ -21,14 +21,51 @@ export class KnowledgeBaseService {
 		baseURL: string;
 	} | null> {
 		try {
+			// Check if model exists
+			if (!model) {
+				logger.error(`Model is null or undefined`);
+				return null;
+			}
+
+			// DEBUG: Log the entire model object
+			logger.info(`[DEBUG] Model object received:`, {
+				id: model.id,
+				provider: model.provider,
+				name: model.name,
+				fullModel: JSON.stringify(model),
+			});
+
+			// Extract provider from model
+			// If model.provider is missing, try to extract from model.id (format: "provider:model_id")
+			let providerId = model.provider;
+			let modelId = model.id;
+
+			if (!providerId) {
+				// Try to extract provider from model.id if it contains ":"
+				if (model.id && model.id.includes(":")) {
+					const parts = model.id.split(":");
+					providerId = parts[0];
+					modelId = parts.slice(1).join(":");
+					logger.warn(`Model missing provider field, extracted from id:`, {
+						originalId: model.id,
+						extractedProvider: providerId,
+						extractedModelId: modelId,
+					});
+				} else {
+					logger.error(`Model missing provider field and id format invalid:`, {
+						modelId: model.id,
+						modelName: model.name,
+					});
+					return null;
+				}
+			}
+
 			// Format: "provider:model_id"
-			const fullModelId = model.provider
-				? `${model.provider}:${model.id}`
-				: model.id;
+			const fullModelId = `${providerId}:${modelId}`;
 
 			logger.info(`Converting model to ApiClient:`, {
 				modelId: model.id,
-				provider: model.provider,
+				provider: providerId,
 				fullModelId,
 			});
 
@@ -56,7 +93,7 @@ export class KnowledgeBaseService {
 			logger.info(`Using baseURL for embedding:`, { baseURL });
 
 			return {
-				model: model.id,
+				model: modelId, // Use extracted modelId (without provider prefix)
 				provider: provider.id,
 				apiKey: provider.apiKey || "",
 				baseURL,
@@ -72,6 +109,15 @@ export class KnowledgeBaseService {
 	private async toKnowledgeBaseParams(
 		base: KnowledgeBase,
 	): Promise<KnowledgeBaseParams | null> {
+		// DEBUG: Log the knowledge base object
+		logger.info(`[DEBUG] Knowledge base object:`, {
+			id: base.id,
+			name: base.name,
+			hasModel: !!base.model,
+			modelType: typeof base.model,
+			model: base.model ? JSON.stringify(base.model) : "null",
+		});
+
 		const embedApiClient = await this.modelToApiClient(base.model);
 		if (!embedApiClient) {
 			logger.error(

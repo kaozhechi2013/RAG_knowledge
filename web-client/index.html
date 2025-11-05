@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 
 <head>
@@ -392,7 +392,10 @@
 <body class="bg-gray-100 h-screen flex flex-col">
     <!-- 顶部栏 -->
     <div class="bg-white shadow-sm p-4 flex items-center justify-between">
-        <h1 class="text-xl font-bold text-gray-800">💬 Knowledge AI 助手</h1>
+        <div>
+            <h1 class="text-xl font-bold text-gray-800">💬 Knowledge AI 助手</h1>
+            <p id="knowledgeStatus" class="text-xs text-gray-500 mt-1">准备就绪</p>
+        </div>
         <div class="flex items-center gap-4">
             <span id="status" class="text-sm text-gray-500">未连接</span>
             <button onclick="toggleSettings()" class="text-gray-600 hover:text-gray-800">⚙️</button>
@@ -432,34 +435,36 @@
                     🔄 刷新模型列表
                 </button>
             </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">
-                    📦 更新助手配置（高级功能）
-                </label>
-                <textarea id="importConfig" rows="6" placeholder='✅ 系统已预设默认助手配置
+            <!-- 高级选项：助手配置导入(折叠) -->
+            <details class="border rounded-lg p-3 bg-gray-50">
+                <summary class="cursor-pointer text-sm font-medium text-gray-700 select-none">
+                    🔧 高级选项：导入助手配置 (通常不需要)
+                </summary>
+                <div class="mt-3">
+                    <textarea id="importConfig" rows="6" placeholder='ℹ️ 使用"刷新知识库"功能即可，无需导入配置
 
-仅在以下情况需要重新导入：
+仅在以下情况需要手动导入：
 • 管理员修改了知识库的 Embedding 模型
-• 管理员修改了重排序模型配置
-• 需要切换到其他助手
-
-💡 注意：管理员新增/删除文档无需重新导入！
-文档变化会自动同步，下次提问即可搜索到新内容。
+• 管理员修改了重排序模型配置  
+• 需要使用特定的助手配置
 
 导入步骤：
 1. 在 Knowledge 桌面应用中右键点击助手
 2. 选择 "导出Web端配置"
 3. 粘贴到这里
 4. 点击下方"导入配置"按钮'
-                    class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 font-mono text-sm"></textarea>
-                <button onclick="importAssistantConfig()"
-                    class="mt-2 w-full bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600">
-                    📥 导入配置
-                </button>
-                <!-- 隐藏字段用于存储助手ID和API Key（已废弃，保留兼容性） -->
-                <input type="hidden" id="assistantId">
-                <input type="hidden" id="apiKey">
-            </div>
+                        class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 font-mono text-sm"></textarea>
+                    <button onclick="importAssistantConfig()"
+                        class="mt-2 w-full bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600">
+                        📥 导入配置
+                    </button>
+                </div>
+            </details>
+
+            <!-- 隐藏字段用于存储助手ID和API Key（已废弃，保留兼容性） -->
+            <input type="hidden" id="assistantId">
+            <input type="hidden" id="apiKey">
+
             <div class="flex gap-2">
                 <button onclick="saveSettings()"
                     class="flex-1 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">
@@ -488,6 +493,21 @@
     <!-- 输入区域 -->
     <div class="bg-white border-t p-4">
         <div class="mx-auto" style="max-width: 1200px; padding: 0 20px;">
+            <!-- 知识库选择器 -->
+            <div class="mb-3 flex items-center gap-3">
+                <label class="text-sm font-medium text-gray-700 whitespace-nowrap">📚 知识库:</label>
+                <select id="knowledgeBaseSelect" 
+                    class="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                    onchange="onKnowledgeBaseChange()">
+                    <option value="">💬 普通对话 (不使用知识库)</option>
+                </select>
+                <button onclick="refreshKnowledgeBases()" 
+                    class="px-3 py-2 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 whitespace-nowrap"
+                    title="从Knowledge应用刷新知识库列表">
+                    🔄 刷新
+                </button>
+            </div>
+            
             <div class="flex gap-2">
                 <input type="text" id="messageInput" placeholder="输入您的问题..."
                     class="flex-1 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -507,8 +527,8 @@
 
     <script>
         // 配置
-        // 内部使用的固定 API Key（用户无需配置）
-        const INTERNAL_API_KEY = 'cs-sk-23b57a53-e400-4068-96c4-339bbb380554';
+        // API Key 将在首次访问时从服务器动态获取
+        let INTERNAL_API_KEY = '';
         
         // 默认助手配置（从桌面应用导出）
         const DEFAULT_ASSISTANT_CONFIG = {
@@ -677,8 +697,23 @@
             return 'http://localhost:8080';
         }
 
+        // 从API服务器获取API Key
+        async function fetchApiKey(apiUrl) {
+            try {
+                const response = await fetch(`${apiUrl}/`);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                const data = await response.json();
+                return data.apiKey || '';
+            } catch (error) {
+                console.error('获取API Key失败:', error);
+                return '';
+            }
+        }
+
         // 初始化配置（首次访问时使用默认配置）
-        function initializeConfig() {
+        async function initializeConfig() {
             const isFirstVisit = !localStorage.getItem('configInitialized');
             
             if (isFirstVisit) {
@@ -697,6 +732,15 @@
             const apiUrl = localStorage.getItem('apiUrl') || getDefaultApiUrl();
             console.log('🌐 API 地址:', apiUrl);
             
+            // 获取API Key
+            const apiKey = await fetchApiKey(apiUrl);
+            if (apiKey) {
+                INTERNAL_API_KEY = apiKey;
+                console.log('🔑 API Key 已获取');
+            } else {
+                console.warn('⚠️ 无法获取 API Key, 部分功能可能不可用');
+            }
+            
             return {
                 apiUrl: apiUrl,
                 model: localStorage.getItem('model') || 'deepseek-chat',
@@ -705,14 +749,23 @@
             };
         }
 
-        let config = initializeConfig();
+        let config;
         let availableModels = [];
 
-        // 初始化
-        document.getElementById('apiUrl').value = config.apiUrl;
-        document.getElementById('assistantId').value = config.assistantId;
-        updateStatus();
-        refreshModels();
+        // 异步初始化
+        (async function() {
+            config = await initializeConfig();
+            
+            // 初始化UI
+            document.getElementById('apiUrl').value = config.apiUrl;
+            document.getElementById('assistantId').value = config.assistantId;
+            updateStatus();
+            updateKnowledgeStatus(); // 初始化时更新知识库状态
+            refreshModels();
+            
+            // 自动加载知识库列表
+            await refreshKnowledgeBases();
+        })();
 
         // 切换设置面板
         function toggleSettings() {
@@ -821,6 +874,108 @@
             }
         }
 
+        // 刷新知识库列表
+        async function refreshKnowledgeBases() {
+            const apiUrl = document.getElementById('apiUrl').value.trim();
+
+            if (!apiUrl) {
+                alert('⚠️ 请先填写 API 地址');
+                return;
+            }
+
+            const selectEl = document.getElementById('knowledgeBaseSelect');
+            selectEl.innerHTML = '<option value="">🔄 加载中...</option>';
+
+            try {
+                const response = await fetch(`${apiUrl}/v1/knowledge`, {
+                    headers: {
+                        'Authorization': `Bearer ${INTERNAL_API_KEY}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const result = await response.json();
+                const knowledgeBases = result.data || [];
+
+                if (knowledgeBases.length === 0) {
+                    selectEl.innerHTML = '<option value="">📚 暂无知识库</option>';
+                    alert('ℹ️ 提示\n\n当前没有可用的知识库。\n\n请在 Knowledge 桌面应用中创建知识库并添加文档。');
+                    return;
+                }
+
+                // 清空并添加选项
+                selectEl.innerHTML = '<option value="">💬 普通对话 (不使用知识库)</option>';
+                
+                knowledgeBases.forEach(kb => {
+                    const option = document.createElement('option');
+                    option.value = kb.id;
+                    const docCount = kb.documentCount || 0;
+                    const modelInfo = kb.model ? ` - ${kb.model.name}` : '';
+                    option.textContent = `📚 ${kb.name} (${docCount}个文档${modelInfo})`;
+                    option.dataset.knowledgeBase = JSON.stringify(kb);
+                    selectEl.appendChild(option);
+                });
+
+                console.log(`✅ 加载了 ${knowledgeBases.length} 个知识库`);
+                
+                // 如果之前选择过知识库,恢复选择（只取第一个）
+                if (config.knowledgeBases && config.knowledgeBases.length > 0) {
+                    const savedKbId = config.knowledgeBases[0].id;
+                    selectEl.value = savedKbId;
+                    updateKnowledgeStatus();
+                }
+
+            } catch (error) {
+                selectEl.innerHTML = '<option value="">❌ 加载失败</option>';
+                console.error('获取知识库列表失败:', error);
+                alert(`❌ 加载知识库失败\n\n${error.message}\n\n请检查:\n1. API 地址是否正确\n2. Knowledge 应用是否正在运行\n3. 网络连接是否正常`);
+            }
+        }
+
+        // 获取当前选中的知识库
+        function getSelectedKnowledgeBases() {
+            const selectEl = document.getElementById('knowledgeBaseSelect');
+            const selectedValue = selectEl.value;
+            
+            // 如果没选择或选择了空值，返回空数组
+            if (!selectedValue || selectedValue === '') {
+                return [];
+            }
+            
+            // 获取选中option的data
+            const selectedOption = selectEl.options[selectEl.selectedIndex];
+            try {
+                const kb = JSON.parse(selectedOption.dataset.knowledgeBase);
+                return [kb];
+            } catch (e) {
+                console.error('解析知识库数据失败:', e);
+                return [];
+            }
+        }
+
+        // 知识库选择变化时触发
+        function onKnowledgeBaseChange() {
+            const selectedKbs = getSelectedKnowledgeBases();
+            config.knowledgeBases = selectedKbs;
+            
+            // 保存到localStorage
+            localStorage.setItem('knowledgeBases', JSON.stringify(selectedKbs));
+            
+            // 更新顶部状态显示
+            updateKnowledgeStatus();
+            
+            // 提示用户
+            if (selectedKbs.length === 0) {
+                console.log('💬 切换到普通对话模式');
+            } else {
+                const kb = selectedKbs[0];
+                console.log(`📚 已切换到知识库: ${kb.name} (${kb.documentCount || 0}个文档)`);
+            }
+        }
+
         // 测试连接
         async function testConnection() {
             // 读取输入框的当前值,而不是已保存的 config
@@ -863,6 +1018,10 @@
                 config.model = selectedModel;
             }
 
+            // 保存选中的知识库
+            const selectedKbs = getSelectedKnowledgeBases();
+            config.knowledgeBases = selectedKbs;
+
             localStorage.setItem('apiUrl', config.apiUrl);
             localStorage.setItem('model', config.model);
             localStorage.setItem('assistantId', config.assistantId);
@@ -870,20 +1029,38 @@
 
             toggleSettings();
             updateStatus();
+            updateKnowledgeStatus(); // 更新知识库状态显示
             
             let alertMsg = '✅ 设置已保存！\n\n当前模型: ' + config.model;
-            if (config.assistantId) {
-                alertMsg += '\n助手ID: ' + config.assistantId;
-                alertMsg += '\n知识库数量: ' + (config.knowledgeBases?.length || 0);
-                if (config.knowledgeBases && config.knowledgeBases.length > 0) {
-                    alertMsg += '\n\n💡 将自动使用助手关联的知识库';
-                } else {
-                    alertMsg += '\n\n⚠️ 提示: 请使用"导入助手配置"功能导入知识库配置';
-                }
+            if (selectedKbs.length > 0) {
+                alertMsg += '\n📚 已选择 ' + selectedKbs.length + ' 个知识库:';
+                selectedKbs.forEach(kb => {
+                    alertMsg += '\n  • ' + kb.name + ' (' + (kb.documentCount || 0) + '个文档)';
+                });
             } else {
-                alertMsg += '\n\n💡 提示: 使用"导入助手配置"可启用知识库功能';
+                alertMsg += '\n\n� 当前模式: 普通对话 (未使用知识库)';
             }
             alert(alertMsg);
+        }
+
+        // 更新知识库状态显示
+        function updateKnowledgeStatus() {
+            const statusEl = document.getElementById('knowledgeStatus');
+            if (!statusEl) return;
+
+            const kbCount = config.knowledgeBases?.length || 0;
+            if (kbCount === 0) {
+                statusEl.textContent = '💬 当前模式: 普通对话';
+                statusEl.className = 'text-xs text-gray-500 mt-1';
+            } else if (kbCount === 1) {
+                const kb = config.knowledgeBases[0];
+                statusEl.textContent = `📚 知识库: ${kb.name} (${kb.documentCount || 0}个文档)`;
+                statusEl.className = 'text-xs text-blue-600 mt-1';
+            } else {
+                const totalDocs = config.knowledgeBases.reduce((sum, kb) => sum + (kb.documentCount || 0), 0);
+                statusEl.textContent = `📚 已选择 ${kbCount} 个知识库 (共${totalDocs}个文档)`;
+                statusEl.className = 'text-xs text-blue-600 mt-1';
+            }
         }
 
         // 更新连接状态
@@ -1509,3 +1686,4 @@
 </body>
 
 </html>
+

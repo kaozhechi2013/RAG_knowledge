@@ -3,10 +3,12 @@ import cors from "cors";
 import express from "express";
 import { v4 as uuidv4 } from "uuid";
 
+import { config } from "./config";
 import { authMiddleware } from "./middleware/auth";
 import { errorHandler } from "./middleware/error";
 import { setupOpenAPIDocumentation } from "./middleware/openapi";
 import { chatRoutes } from "./routes/chat";
+import { knowledgeRoutes } from "./routes/knowledge";
 import { mcpRoutes } from "./routes/mcp";
 import { modelsRoutes } from "./routes/models";
 
@@ -98,14 +100,17 @@ app.get("/health", (_req, res) => {
  *                 endpoints:
  *                   type: object
  */
-app.get("/", (_req, res) => {
+app.get("/", async (_req, res) => {
+	const cfg = await config.get();
 	res.json({
 		name: "Knowledge API",
 		version: "1.0.0",
+		apiKey: cfg.apiKey, // Web client需要这个key来访问API
 		endpoints: {
 			health: "GET /health",
 			models: "GET /v1/models",
 			chat: "POST /v1/chat/completions",
+			knowledge: "GET /v1/knowledge",
 			mcp: "GET /v1/mcps",
 		},
 	});
@@ -117,6 +122,7 @@ apiRouter.use(authMiddleware);
 apiRouter.use(express.json());
 // Mount routes
 apiRouter.use("/chat", chatRoutes);
+apiRouter.use("/knowledge", knowledgeRoutes);
 apiRouter.use("/mcps", mcpRoutes);
 apiRouter.use("/models", modelsRoutes);
 app.use("/v1", apiRouter);

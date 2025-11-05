@@ -282,7 +282,7 @@ router.post("/completions", async (req: Request, res: Response) => {
 		if (request.stream) {
 			const streamResponse = await client.chat.completions.create(request);
 
-			res.setHeader("Content-Type", "text/plain; charset=utf-8");
+			res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
 			res.setHeader("Cache-Control", "no-cache");
 			res.setHeader("Connection", "keep-alive");
 

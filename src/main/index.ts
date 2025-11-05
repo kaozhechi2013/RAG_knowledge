@@ -35,6 +35,7 @@ import { initWebviewHotkeys } from "./services/WebviewService";
 import { windowService } from "./services/WindowService";
 
 const logger = loggerService.withContext("MainEntry");
+let trayService: TrayService | null = null;
 
 /**
  * Disable hardware acceleration if setting is enabled
@@ -124,8 +125,14 @@ if (!app.requestSingleInstanceLock()) {
 			app.dock?.hide();
 		}
 
-		const mainWindow = windowService.createMainWindow();
-		new TrayService();
+		windowService.createMainWindow();
+
+		trayService = new TrayService();
+
+		const mainWindow = windowService.getMainWindow();
+		if (!mainWindow) {
+			throw new Error("Failed to create main window");
+		}
 
 		nodeTraceService.init();
 
@@ -202,6 +209,12 @@ if (!app.requestSingleInstanceLock()) {
 
 	app.on("before-quit", () => {
 		app.isQuitting = true;
+
+		// Destroy tray icon immediately to prevent ghost icons
+		if (trayService) {
+			trayService.destroy();
+			trayService = null;
+		}
 
 		// quit selection service
 		if (selectionService) {
