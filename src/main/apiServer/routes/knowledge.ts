@@ -69,7 +69,7 @@ router.get("/", async (_req: Request, res: Response) => {
 			itemsCount: knowledgeBases[0].items?.length,
 		});
 
-		// 转换为简化格式,适合前端展示
+		// 转换为格式,包含items信息用于匹配文件名
 		const simplifiedBases = knowledgeBases.map((base) => ({
 			id: base.id,
 			name: base.name,
@@ -91,7 +91,22 @@ router.get("/", async (_req: Request, res: Response) => {
 			documentCount: base.items?.length || 0,
 			created_at: base.created_at,
 			updated_at: base.updated_at,
-			// 不返回完整的 items 数组,只返回数量
+			// 返回items数组用于文件名匹配（只包含必要的文件信息）
+			items:
+				base.items?.map((item: any) => ({
+					id: item.id,
+					type: item.type,
+					content:
+						item.type === "file" && item.content
+							? {
+									id: item.content.id,
+									name: item.content.name,
+									origin_name: item.content.origin_name,
+									path: item.content.path,
+									ext: item.content.ext,
+								}
+							: item.content,
+				})) || [],
 		}));
 
 		logger.info(`返回 ${simplifiedBases.length} 个知识库`);

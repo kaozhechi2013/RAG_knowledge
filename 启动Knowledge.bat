@@ -4,10 +4,10 @@ cd /d "%~dp0"
 
 cls
 echo ========================================
-echo   Knowledge Development Server
+echo   Knowledge AI System
 echo ========================================
 echo.
-echo Project: %CD%
+echo Starting all services...
 echo.
 
 REM Get local IP address
@@ -18,39 +18,45 @@ for /f "tokens=2 delims=:" %%a in ('ipconfig ^| findstr /c:"IPv4"') do (
 :found
 set "ip=%ip:~1%"
 
-echo ========================================
-echo   Access URLs
-echo ========================================
-echo.
-echo Desktop App:
-echo   - Knowledge Electron App will open automatically
-echo.
-echo Web Client (Browser):
-echo   Local Access:
-echo     http://localhost:8081
-echo     http://127.0.0.1:8081
-echo.
-echo   LAN Access (for colleagues):
-echo     http://%ip%:8081
-echo.
-echo API Server:
-echo   http://localhost:8080
-echo   http://%ip%:8080
-echo.
-echo ========================================
-echo   Starting Services...
-echo ========================================
-echo.
+REM Clean port 8081 if occupied
+netstat -ano | findstr ":8081" >nul
+if %errorlevel% equ 0 (
+    echo Cleaning port 8081...
+    for /f "tokens=5" %%p in ('netstat -ano ^| findstr ":8081"') do taskkill /F /PID %%p >nul 2>&1
+    timeout /t 1 /nobreak >nul
+)
 
-REM Start Web server in background (hidden)
-echo [1/2] Starting Web Server (port 8081)...
+REM Start Web server in background
+echo [1/2] Starting Modern Web Client (port 8081)...
 start /B "" cmd /c "cd /d "%~dp0\web-client" && python -m http.server 8081 --bind 0.0.0.0 >nul 2>&1"
 
 REM Wait 2 seconds for Web server to start
 timeout /t 2 /nobreak >nul
 
-REM Start main application
-echo [2/2] Starting Knowledge Desktop App...
+REM Open browser with modern web client
+start http://localhost:8081/index.html
+
 echo.
+echo ========================================
+echo   Access URLs
+echo ========================================
+echo.
+echo Modern Web Client:
+echo   Local:  http://localhost:8081/index.html
+echo   LAN:    http://%ip%:8081/index.html
+echo.
+echo Desktop App:
+echo   Knowledge Electron will open automatically
+echo.
+echo API Server (auto-started by desktop app):
+echo   Local:  http://localhost:8080
+echo   LAN:    http://%ip%:8080
+echo.
+echo ========================================
+echo   [2/2] Starting Knowledge Desktop App...
+echo ========================================
+echo.
+
+REM Start main application (includes API server on port 8080)
 yarn dev
 

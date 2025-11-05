@@ -8,6 +8,26 @@
 > 
 > **注意**：本项目遵循 AGPL-3.0 开源协议。如果您在公网部署此应用，必须开源您的修改代码。
 
+## 🚀 快速启动
+
+**一键启动所有服务:**
+
+```bash
+双击运行: 启动Knowledge.bat
+```
+
+这将自动启动:
+- ✅ 现代化Web客户端 (http://localhost:8081/index.html)
+- ✅ Knowledge桌面应用 (Electron)
+- ✅ API服务器 (http://localhost:8080)
+
+**访问方式:**
+- **Web客户端** (推荐): http://localhost:8081/index.html
+- **桌面应用**: 自动打开Electron窗口
+- **局域网访问**: http://[你的IP]:8081/index.html
+
+📖 详细说明请查看: [启动说明.md](启动说明.md) | [快速启动卡片.txt](快速启动卡片.txt)
+
 ## 📋 项目简介
 
 Knowledge 是一款基于 Electron 的桌面应用程序，专为企业内部知识管理和 AI 辅助而设计。通过集成多个 LLM 服务商，为团队提供统一的 AI 交互平台。

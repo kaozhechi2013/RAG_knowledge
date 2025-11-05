@@ -1,1689 +1,1586 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Knowledge - 聊天客户端</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Markdown 渲染库 -->
+    <title>Knowledge AI - 现代化聊天助手</title>
+    <!-- Markdown & Code Highlight -->
     <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
-    <!-- 代码高亮库 -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/atom-one-dark.min.css">
     <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/highlight.min.js"></script>
-    <!-- KaTeX 数学公式渲染 -->
+    <!-- KaTeX Math -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
     <style>
-        .message {
-            animation: fadeIn 0.3s;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
 
-        @keyframes fadeIn {
+        :root {
+            --primary-color: #6366f1;
+            --primary-hover: #4f46e5;
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8fafc;
+            --bg-tertiary: #f1f5f9;
+            --border-color: #e2e8f0;
+            --text-primary: #0f172a;
+            --text-secondary: #64748b;
+            --text-tertiary: #94a3b8;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            overflow: hidden;
+        }
+
+        /* Layout */
+        .app-container {
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 260px;
+            background: var(--bg-primary);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar.collapsed {
+            transform: translateX(-100%);
+        }
+
+        .sidebar-header {
+            padding: 16px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .sidebar-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .new-chat-btn {
+            padding: 10px 16px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .new-chat-btn:hover {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+        }
+
+        .sessions-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+        }
+
+        .session-item {
+            padding: 12px;
+            margin-bottom: 4px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .session-item:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .session-item.active {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .session-title {
+            flex: 1;
+            font-size: 14px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .session-delete {
+            opacity: 0;
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+            border: none;
+            border-radius: 4px;
+            padding: 4px 8px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+
+        .session-item:hover .session-delete {
+            opacity: 1;
+        }
+
+        .session-delete:hover {
+            background: #ef4444;
+            color: white;
+        }
+
+        /* Main Chat Area */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            padding: 16px 24px;
+            background: var(--bg-primary);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .chat-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .icon-btn {
+            padding: 8px;
+            background: transparent;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-size: 18px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .icon-btn:hover {
+            background: var(--bg-tertiary);
+            border-color: var(--primary-color);
+        }
+
+        .status-badge {
+            padding: 4px 12px;
+            background: #dcfce7;
+            color: #16a34a;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-badge.offline {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        /* Chat Messages */
+        .chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            scroll-behavior: smooth;
+        }
+
+        .message-group {
+            max-width: 900px;
+            margin: 0 auto 24px;
+            animation: messageSlideIn 0.3s ease;
+        }
+
+        @keyframes messageSlideIn {
             from {
                 opacity: 0;
-                transform: translateY(10px);
+                transform: translateY(20px);
             }
-
             to {
                 opacity: 1;
                 transform: translateY(0);
             }
         }
 
-        /* Markdown 样式优化 */
-        .markdown-content {
-            line-height: 1.6;
+        .message-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
         }
 
-        .markdown-content h1,
-        .markdown-content h2,
-        .markdown-content h3,
-        .markdown-content h4,
-        .markdown-content h5,
-        .markdown-content h6 {
+        .avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
             font-weight: 600;
-            margin-top: 1.5em;
-            margin-bottom: 0.5em;
+            background: var(--primary-color);
+            color: white;
         }
 
-        .markdown-content h1 {
+        .avatar.user {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .avatar.assistant {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .message-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .message-time {
+            font-size: 12px;
+            color: var(--text-tertiary);
+        }
+
+        .message-content {
+            background: var(--bg-primary);
+            border-radius: var(--radius-md);
+            padding: 16px 20px;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border-color);
+        }
+
+        .message-group.user .message-content {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+        }
+
+        /* Markdown Styles */
+        .markdown-body {
+            line-height: 1.7;
+            font-size: 15px;
+        }
+
+        .markdown-body h1,
+        .markdown-body h2,
+        .markdown-body h3 {
+            margin-top: 24px;
+            margin-bottom: 16px;
+            font-weight: 600;
+        }
+
+        .markdown-body h1 {
+            font-size: 1.8em;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 8px;
+        }
+
+        .markdown-body h2 {
             font-size: 1.5em;
-            border-bottom: 2px solid #e5e7eb;
-            padding-bottom: 0.3em;
         }
 
-        .markdown-content h2 {
-            font-size: 1.3em;
-            border-bottom: 1px solid #e5e7eb;
-            padding-bottom: 0.3em;
+        .markdown-body h3 {
+            font-size: 1.25em;
         }
 
-        .markdown-content h3 {
-            font-size: 1.15em;
+        .markdown-body p {
+            margin-bottom: 16px;
         }
 
-        .markdown-content p {
-            margin-bottom: 1em;
-        }
-
-        .markdown-content ul,
-        .markdown-content ol {
-            margin-bottom: 1em;
+        .markdown-body ul,
+        .markdown-body ol {
+            margin-bottom: 16px;
             padding-left: 2em;
         }
 
-        .markdown-content ul {
-            list-style-type: disc;
+        .markdown-body li {
+            margin-bottom: 8px;
         }
 
-        .markdown-content ol {
-            list-style-type: decimal;
-        }
-
-        .markdown-content li {
-            margin-bottom: 0.25em;
-        }
-
-        .markdown-content pre {
-            background-color: #f6f8fa;
-            border-radius: 6px;
-            padding: 1em;
+        .markdown-body pre {
+            background: #282c34;
+            border-radius: var(--radius-sm);
+            padding: 16px;
             overflow-x: auto;
-            margin-bottom: 1em;
+            margin-bottom: 16px;
         }
 
-        .markdown-content code {
-            background-color: #f6f8fa;
-            padding: 0.2em 0.4em;
-            border-radius: 3px;
+        .markdown-body code {
+            background: rgba(135, 131, 120, 0.15);
+            color: #eb5757;
+            padding: 3px 6px;
+            border-radius: 4px;
             font-size: 0.9em;
             font-family: 'Courier New', monospace;
         }
 
-        .markdown-content pre code {
-            background-color: transparent;
+        .markdown-body pre code {
+            background: transparent;
+            color: #abb2bf;
             padding: 0;
         }
 
-        .markdown-content blockquote {
-            border-left: 4px solid #e5e7eb;
-            padding-left: 1em;
-            color: #6b7280;
-            margin-bottom: 1em;
-        }
-
-        .markdown-content table {
-            border-collapse: collapse;
-            width: 100%;
-            margin-bottom: 1em;
-        }
-
-        .markdown-content th,
-        .markdown-content td {
-            border: 1px solid #e5e7eb;
-            padding: 0.5em;
-            text-align: left;
-        }
-
-        .markdown-content th {
-            background-color: #f9fafb;
-            font-weight: 600;
-        }
-
-        .markdown-content a {
-            color: #3b82f6;
-            text-decoration: underline;
-        }
-
-        .markdown-content a:hover {
-            color: #2563eb;
-        }
-
-        .markdown-content strong {
-            font-weight: 600;
-        }
-
-        .markdown-content em {
+        .markdown-body blockquote {
+            border-left: 4px solid var(--primary-color);
+            padding-left: 16px;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
             font-style: italic;
         }
 
-        .markdown-content hr {
-            border: none;
-            border-top: 1px solid #e5e7eb;
-            margin: 1.5em 0;
+        .markdown-body table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-bottom: 16px;
         }
 
-        /* 引用标注样式 - 模仿 Cherry Studio */
+        .markdown-body th,
+        .markdown-body td {
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            text-align: left;
+        }
+
+        .markdown-body th {
+            background: var(--bg-tertiary);
+            font-weight: 600;
+        }
+
+        .markdown-body a {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+
+        .markdown-body a:hover {
+            text-decoration: underline;
+        }
+
+        /* User message markdown (white text) */
+        .message-group.user .markdown-body,
+        .message-group.user .markdown-body h1,
+        .message-group.user .markdown-body h2,
+        .message-group.user .markdown-body h3,
+        .message-group.user .markdown-body p,
+        .message-group.user .markdown-body li {
+            color: white;
+        }
+
+        .message-group.user .markdown-body code {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+
+        /* Citations */
         .citation {
             display: inline-block;
-            background-color: #3b82f6;
+            background: var(--primary-color);
             color: white;
             font-size: 0.7em;
             font-weight: 600;
-            padding: 0.15em 0.5em;
-            border-radius: 0.3em;
-            margin: 0 0.15em;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin: 0 2px;
             cursor: pointer;
-            text-decoration: none;
             vertical-align: super;
-            line-height: 1.2;
-            transition: all 0.2s ease;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+            transition: all 0.2s;
         }
 
         .citation:hover {
-            background-color: #2563eb;
-            transform: translateY(-1px);
-            box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+            transform: scale(1.1);
+            box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4);
         }
 
-        .citation:active {
-            transform: translateY(0);
+        .citations-panel {
+            margin-top: 16px;
+            padding: 16px;
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border-color);
         }
 
-        /* 引用弹窗 - 模仿 Cherry Studio */
-        .citation-tooltip {
-            position: fixed;
-            background: white;
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
-            padding: 0;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-            max-width: 450px;
-            min-width: 300px;
-            z-index: 1000;
-            display: none;
-            overflow: hidden;
-        }
-
-        .citation-tooltip.show {
-            display: block;
-            animation: tooltipFadeIn 0.2s ease;
-        }
-
-        @keyframes tooltipFadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(-5px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .citation-tooltip-header {
-            background: #f9fafb;
-            border-bottom: 1px solid #e5e7eb;
-            padding: 12px 16px;
+        .citations-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: var(--text-primary);
             display: flex;
             align-items: center;
             gap: 8px;
         }
 
-        .citation-tooltip-icon {
-            font-size: 1.2em;
-        }
-
-        .citation-title {
-            font-weight: 600;
-            color: #1f2937;
-            font-size: 0.9em;
-            flex: 1;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .citation-content {
-            color: #4b5563;
-            font-size: 0.85em;
-            line-height: 1.6;
-            max-height: 250px;
-            overflow-y: auto;
-            padding: 16px;
-            background: white;
-        }
-
-        .citation-content::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        .citation-content::-webkit-scrollbar-track {
-            background: #f3f4f6;
-        }
-
-        .citation-content::-webkit-scrollbar-thumb {
-            background: #d1d5db;
-            border-radius: 3px;
-        }
-
-        .citation-url {
-            color: #3b82f6;
-            font-size: 0.75em;
-            padding: 10px 16px;
-            border-top: 1px solid #f3f4f6;
-            background: #fafbfc;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .citation-url:hover {
-            background: #f3f4f6;
-        }
-
-        .citation-badge {
-            display: inline-block;
-            background: #dbeafe;
-            color: #1e40af;
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 0.75em;
-            font-weight: 600;
-        }
-
-        /* 引用列表样式 */
-        .citations-list {
-            padding: 16px;
-            background: #f9fafb;
-            border: 1px solid #e5e7eb;
-            border-radius: 8px;
-            font-size: 0.9em;
-        }
-
-        .citations-list-title {
-            font-weight: 600;
-            color: #374151;
-            margin-bottom: 12px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
         .citation-item {
-            display: flex;
-            align-items: flex-start;
-            gap: 10px;
             padding: 12px;
-            background: white;
-            border: 1px solid #e5e7eb;
-            border-radius: 8px;
+            background: var(--bg-primary);
+            border-radius: var(--radius-sm);
+            margin-bottom: 8px;
             cursor: pointer;
             transition: all 0.2s;
+            border: 1px solid var(--border-color);
         }
 
         .citation-item:hover {
-            background: #f3f4f6;
-            border-color: #3b82f6;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            border-color: var(--primary-color);
+            transform: translateX(4px);
         }
 
-        .citation-item-number {
-            flex-shrink: 0;
+        .citation-item-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .citation-number {
             width: 24px;
             height: 24px;
-            background: #3b82f6;
+            background: var(--primary-color);
             color: white;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.8em;
+            font-size: 12px;
             font-weight: 600;
         }
 
-        .citation-item-content {
-            flex: 1;
-            min-width: 0;
-        }
-
         .citation-item-title {
+            flex: 1;
+            font-size: 14px;
             font-weight: 500;
-            color: #1f2937;
-            margin-bottom: 4px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
+            color: var(--text-primary);
         }
 
-        .citation-item-preview {
-            font-size: 0.85em;
-            color: #6b7280;
-            line-height: 1.4;
+        .citation-score {
+            font-size: 12px;
+            color: var(--text-tertiary);
+        }
+
+        .citation-preview {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.5;
             display: -webkit-box;
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
             overflow: hidden;
         }
 
-        .citation-item-meta {
+        /* Input Area */
+        .input-area {
+            background: var(--bg-primary);
+            border-top: 1px solid var(--border-color);
+            padding: 20px 24px;
+        }
+
+        .input-container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .kb-selector {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .kb-selector label {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            white-space: nowrap;
+        }
+
+        .kb-selector select {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .kb-selector select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .input-wrapper {
+            display: flex;
+            gap: 12px;
+            align-items: flex-end;
+        }
+
+        .input-box {
+            flex: 1;
+            position: relative;
+        }
+
+        .input-box textarea {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid var(--border-color);
+            border-radius: var(--radius-md);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-size: 15px;
+            font-family: inherit;
+            resize: none;
+            max-height: 200px;
+            transition: all 0.2s;
+        }
+
+        .input-box textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .send-btn {
+            padding: 14px 24px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 600;
+            transition: all 0.2s;
             display: flex;
             align-items: center;
             gap: 8px;
-            margin-top: 4px;
-            font-size: 0.75em;
-            color: #9ca3af;
+            white-space: nowrap;
         }
 
-        .no-citations {
+        .send-btn:hover:not(:disabled) {
+            background: var(--primary-hover);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Settings Modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            animation: fadeIn 0.2s;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal {
+            background: var(--bg-primary);
+            border-radius: var(--radius-lg);
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: var(--shadow-lg);
+            animation: modalSlideIn 0.3s ease;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .close-btn {
+            background: transparent;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-tertiary);
+            transition: color 0.2s;
+        }
+
+        .close-btn:hover {
+            color: var(--text-primary);
+        }
+
+        .modal-body {
+            padding: 24px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .form-input,
+        .form-select {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .form-input:focus,
+        .form-select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .form-hint {
+            margin-top: 6px;
+            font-size: 12px;
+            color: var(--text-tertiary);
+        }
+
+        .btn-primary {
+            padding: 10px 20px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-hover);
+        }
+
+        .btn-secondary {
+            padding: 10px 20px;
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .btn-secondary:hover {
+            background: var(--border-color);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 12px;
+        }
+
+        /* Loading Animation */
+        .typing-indicator {
+            display: inline-flex;
+            gap: 4px;
+            padding: 8px 0;
+        }
+
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--text-tertiary);
+            border-radius: 50%;
+            animation: typing 1.4s infinite;
+        }
+
+        .typing-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes typing {
+            0%, 60%, 100% {
+                transform: translateY(0);
+                opacity: 0.7;
+            }
+            30% {
+                transform: translateY(-10px);
+                opacity: 1;
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                position: absolute;
+                z-index: 100;
+                height: 100vh;
+            }
+
+            .chat-header {
+                padding: 12px 16px;
+            }
+
+            .chat-container {
+                padding: 16px;
+            }
+
+            .input-area {
+                padding: 16px;
+            }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-tertiary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-tertiary);
+        }
+
+        /* Empty State */
+        .empty-state {
             text-align: center;
-            color: #9ca3af;
-            padding: 16px;
-            font-size: 0.9em;
+            padding: 60px 20px;
+            color: var(--text-tertiary);
         }
 
-        /* KaTeX 数学公式样式优化 */
-        .katex {
-            font-size: 1.1em;
+        .empty-state-icon {
+            font-size: 64px;
+            margin-bottom: 16px;
         }
 
-        .katex-display {
-            margin: 1em 0;
-            overflow-x: auto;
-            overflow-y: hidden;
+        .empty-state-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state-text {
+            font-size: 14px;
         }
     </style>
 </head>
-
-<body class="bg-gray-100 h-screen flex flex-col">
-    <!-- 顶部栏 -->
-    <div class="bg-white shadow-sm p-4 flex items-center justify-between">
-        <div>
-            <h1 class="text-xl font-bold text-gray-800">💬 Knowledge AI 助手</h1>
-            <p id="knowledgeStatus" class="text-xs text-gray-500 mt-1">准备就绪</p>
-        </div>
-        <div class="flex items-center gap-4">
-            <span id="status" class="text-sm text-gray-500">未连接</span>
-            <button onclick="toggleSettings()" class="text-gray-600 hover:text-gray-800">⚙️</button>
-        </div>
-    </div>
-
-    <!-- 设置面板 -->
-    <div id="settings" class="hidden bg-white border-b p-4">
-        <div class="max-w-2xl mx-auto space-y-4">
-            <div class="p-3 bg-green-50 border border-green-200 rounded-lg mb-4">
-                <p class="text-sm text-green-800">
-                    ✅ <strong>零配置模式</strong> - API Key 已内置，助手配置已预设，打开即用
-                </p>
-                <p class="text-xs text-green-700 mt-1">
-                    🔒 服务器已启用认证保护 | 📚 默认知识库：透明地质、工作总结、浑源可研等
-                </p>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-title">💬 对话历史</div>
             </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">
-                    API 地址 <span class="text-xs text-gray-500">(已自动检测)</span>
-                </label>
-                <input type="text" id="apiUrl" placeholder="http://10.216.186.24:8080"
-                    class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
-                <p class="mt-1 text-xs text-gray-500">
-                    💡 系统自动检测：<br>
-                    • 管理员（本机）：http://localhost:8080<br>
-                    • 同事访问：http://10.216.186.24:8080<br>
-                    一般无需修改
-                </p>
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">选择模型</label>
-                <select id="modelSelect" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
-                    <option value="">请先保存设置以加载模型...</option>
-                </select>
-                <button onclick="refreshModels()" class="mt-2 text-sm text-blue-600 hover:text-blue-800">
-                    🔄 刷新模型列表
+            <div style="padding: 16px;">
+                <button class="new-chat-btn" onclick="createNewSession()">
+                    <span>✨</span>
+                    <span>新建对话</span>
                 </button>
             </div>
-            <!-- 高级选项：助手配置导入(折叠) -->
-            <details class="border rounded-lg p-3 bg-gray-50">
-                <summary class="cursor-pointer text-sm font-medium text-gray-700 select-none">
-                    🔧 高级选项：导入助手配置 (通常不需要)
-                </summary>
-                <div class="mt-3">
-                    <textarea id="importConfig" rows="6" placeholder='ℹ️ 使用"刷新知识库"功能即可，无需导入配置
+            <div class="sessions-list" id="sessionsList">
+                <!-- Sessions will be added here -->
+            </div>
+        </div>
 
-仅在以下情况需要手动导入：
-• 管理员修改了知识库的 Embedding 模型
-• 管理员修改了重排序模型配置  
-• 需要使用特定的助手配置
-
-导入步骤：
-1. 在 Knowledge 桌面应用中右键点击助手
-2. 选择 "导出Web端配置"
-3. 粘贴到这里
-4. 点击下方"导入配置"按钮'
-                        class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 font-mono text-sm"></textarea>
-                    <button onclick="importAssistantConfig()"
-                        class="mt-2 w-full bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600">
-                        📥 导入配置
-                    </button>
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Header -->
+            <div class="chat-header">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <button class="icon-btn" onclick="toggleSidebar()">☰</button>
+                    <div class="chat-title">Knowledge AI 助手</div>
                 </div>
-            </details>
-
-            <!-- 隐藏字段用于存储助手ID和API Key（已废弃，保留兼容性） -->
-            <input type="hidden" id="assistantId">
-            <input type="hidden" id="apiKey">
-
-            <div class="flex gap-2">
-                <button onclick="saveSettings()"
-                    class="flex-1 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">
-                    保存设置
-                </button>
-                <button onclick="testConnection()"
-                    class="flex-1 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600">
-                    测试连接
-                </button>
+                <div class="header-actions">
+                    <div class="status-badge" id="statusBadge">未连接</div>
+                    <button class="icon-btn" onclick="openSettings()" title="设置">⚙️</button>
+                    <button class="icon-btn" onclick="clearCurrentChat()" title="清空当前对话">🗑️</button>
+                </div>
             </div>
-        </div>
-    </div>
 
-    <!-- 聊天区域 -->
-    <div class="flex-1 overflow-y-auto p-4" id="chatContainer">
-        <div class="mx-auto space-y-4" id="messages" style="max-width: 1200px; padding: 0 20px;">
-            <!-- 欢迎消息 -->
-            <div class="bg-white p-4 rounded-lg shadow-sm">
-                <div class="markdown-content text-gray-600">
-                    <p>👋 <strong>您好!</strong> 我是 Knowledge AI 助手，有什么可以帮您的吗？</p>
+            <!-- Chat Container -->
+            <div class="chat-container" id="chatContainer">
+                <div class="empty-state">
+                    <div class="empty-state-icon">💬</div>
+                    <div class="empty-state-title">开始新的对话</div>
+                    <div class="empty-state-text">选择知识库或直接提问</div>
+                </div>
+            </div>
+
+            <!-- Input Area -->
+            <div class="input-area">
+                <div class="input-container">
+                    <div class="kb-selector">
+                        <label>📚 知识库:</label>
+                        <select id="knowledgeBaseSelect" onchange="onKnowledgeBaseChange()">
+                            <option value="">💬 普通对话</option>
+                        </select>
+                        <button class="icon-btn" onclick="refreshKnowledgeBases()" title="刷新知识库">🔄</button>
+                    </div>
+                    <div class="input-wrapper">
+                        <div class="input-box">
+                            <textarea 
+                                id="messageInput" 
+                                placeholder="输入消息... (Shift + Enter 换行)"
+                                rows="1"
+                                onkeydown="handleInputKeydown(event)"
+                                oninput="autoResizeTextarea(this)"
+                            ></textarea>
+                        </div>
+                        <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+                            <span>发送</span>
+                            <span>➤</span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- 输入区域 -->
-    <div class="bg-white border-t p-4">
-        <div class="mx-auto" style="max-width: 1200px; padding: 0 20px;">
-            <!-- 知识库选择器 -->
-            <div class="mb-3 flex items-center gap-3">
-                <label class="text-sm font-medium text-gray-700 whitespace-nowrap">📚 知识库:</label>
-                <select id="knowledgeBaseSelect" 
-                    class="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
-                    onchange="onKnowledgeBaseChange()">
-                    <option value="">💬 普通对话 (不使用知识库)</option>
-                </select>
-                <button onclick="refreshKnowledgeBases()" 
-                    class="px-3 py-2 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 whitespace-nowrap"
-                    title="从Knowledge应用刷新知识库列表">
-                    🔄 刷新
-                </button>
+    <!-- Settings Modal -->
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">⚙️ 设置</div>
+                <button class="close-btn" onclick="closeSettings()">×</button>
             </div>
-            
-            <div class="flex gap-2">
-                <input type="text" id="messageInput" placeholder="输入您的问题..."
-                    class="flex-1 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                    onkeypress="if(event.key==='Enter') sendMessage()">
-                <button onclick="clearAllMessages()"
-                    class="bg-red-500 text-white px-4 py-3 rounded-lg hover:bg-red-600"
-                    title="清除所有聊天记录">
-                    🗑️ 清除
-                </button>
-                <button onclick="sendMessage()"
-                    class="bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 disabled:bg-gray-300" id="sendBtn">
-                    发送
-                </button>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">API 地址</label>
+                    <input type="text" class="form-input" id="apiUrlInput" placeholder="http://localhost:8080">
+                    <div class="form-hint">本机使用 localhost，局域网访问使用服务器IP</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">选择模型</label>
+                    <select class="form-select" id="modelSelect">
+                        <option value="">加载中...</option>
+                    </select>
+                    <button class="btn-secondary" style="margin-top: 8px;" onclick="refreshModels()">🔄 刷新模型列表</button>
+                </div>
+                <div class="btn-group">
+                    <button class="btn-primary" onclick="saveSettings()">保存设置</button>
+                    <button class="btn-secondary" onclick="testConnection()">测试连接</button>
+                </div>
             </div>
         </div>
     </div>
 
     <script>
-        // 配置
-        // API Key 将在首次访问时从服务器动态获取
-        let INTERNAL_API_KEY = '';
-        
-        // 默认助手配置（从桌面应用导出）
-        const DEFAULT_ASSISTANT_CONFIG = {
-            "assistantId": "b2491632-7f94-4656-816e-9bab0e7f442c",
-            "assistantName": "默认助手",
-            "knowledgeBases": [
-                {
-                    "id": "g_s0Ra6E9hJyzlTckLivx",
-                    "name": "测试",
-                    "model": {
-                        "id": "BAAI/bge-m3",
-                        "name": "BAAI/bge-m3",
-                        "provider": "silicon",
-                        "group": "BAAI"
-                    },
-                    "items": [
-                        {
-                            "id": "a69ef241-4c68-4812-8927-a2888daa2d33",
-                            "type": "file",
-                            "content": {
-                                "id": "9ae8aa7e-0172-41ba-9526-4dc32c2ccc37",
-                                "origin_name": "00透明地质平台操作指南V1.2.docx",
-                                "name": "9ae8aa7e-0172-41ba-9526-4dc32c2ccc37.docx",
-                                "path": "C:\\Users\\29193\\AppData\\Roaming\\knowledgeDev\\Data\\Files\\9ae8aa7e-0172-41ba-9526-4dc32c2ccc37.docx",
-                                "created_at": "2025-10-29T08:46:56.528Z",
-                                "size": 195787,
-                                "ext": ".docx",
-                                "type": "document",
-                                "count": 1
-                            },
-                            "created_at": 1761727616639,
-                            "updated_at": 1761727616639,
-                            "uniqueId": "LocalPathLoader_dbfb04ad5a1b5159dd6c91ff7959a903",
-                            "uniqueIds": [
-                                "LocalPathLoader_dbfb04ad5a1b5159dd6c91ff7959a903"
-                            ],
-                            "isPreprocessed": true
-                        },
-                        {
-                            "id": "ab5a2273-e271-4e07-bdac-495d2bb1b2d6",
-                            "type": "file",
-                            "content": {
-                                "id": "e868c123-a527-496e-9261-d272f6017053",
-                                "origin_name": "2025工作总结和展望—张伟杰.docx",
-                                "name": "e868c123-a527-496e-9261-d272f6017053.docx",
-                                "path": "C:\\Users\\29193\\AppData\\Roaming\\knowledgeDev\\Data\\Files\\e868c123-a527-496e-9261-d272f6017053.docx",
-                                "created_at": "2025-10-29T08:46:56.529Z",
-                                "size": 19036,
-                                "ext": ".docx",
-                                "type": "document",
-                                "count": 1
-                            },
-                            "created_at": 1761727616639,
-                            "updated_at": 1761727616639,
-                            "uniqueId": "LocalPathLoader_d5f24d6dcb6e0e5459a3b8f3320b695a",
-                            "uniqueIds": [
-                                "LocalPathLoader_d5f24d6dcb6e0e5459a3b8f3320b695a"
-                            ],
-                            "isPreprocessed": true
-                        },
-                        {
-                            "id": "50f93c4a-0cb6-4416-9deb-188d9938baf7",
-                            "type": "file",
-                            "content": {
-                                "id": "de39414c-e739-4ef4-8749-48d55ed5a556",
-                                "origin_name": "浑源可研.docx",
-                                "name": "de39414c-e739-4ef4-8749-48d55ed5a556.docx",
-                                "path": "C:\\Users\\29193\\AppData\\Roaming\\knowledgeDev\\Data\\Files\\de39414c-e739-4ef4-8749-48d55ed5a556.docx",
-                                "created_at": "2025-10-29T08:46:56.529Z",
-                                "size": 546890,
-                                "ext": ".docx",
-                                "type": "document",
-                                "count": 1
-                            },
-                            "created_at": 1761727616639,
-                            "updated_at": 1761727616639,
-                            "uniqueId": "LocalPathLoader_1ffe9afb0cef6b2acd2e2650fe116842",
-                            "uniqueIds": [
-                                "LocalPathLoader_1ffe9afb0cef6b2acd2e2650fe116842"
-                            ],
-                            "isPreprocessed": true
-                        },
-                        {
-                            "id": "2ebe4aa4-90b3-4bdc-b881-8a6ff26ff584",
-                            "type": "file",
-                            "content": {
-                                "id": "81c2f07c-1226-495f-8414-b4769a7ab912",
-                                "origin_name": "辽宁庄河抽水蓄能电站.docx",
-                                "name": "81c2f07c-1226-495f-8414-b4769a7ab912.docx",
-                                "path": "C:\\Users\\29193\\AppData\\Roaming\\knowledgeDev\\Data\\Files\\81c2f07c-1226-495f-8414-b4769a7ab912.docx",
-                                "created_at": "2025-10-29T08:46:56.530Z",
-                                "size": 803566,
-                                "ext": ".docx",
-                                "type": "document",
-                                "count": 1
-                            },
-                            "created_at": 1761727616639,
-                            "updated_at": 1761727616639,
-                            "uniqueId": "LocalPathLoader_547a33243163113357d90081e2189b9c",
-                            "uniqueIds": [
-                                "LocalPathLoader_547a33243163113357d90081e2189b9c"
-                            ],
-                            "isPreprocessed": true
-                        },
-                        {
-                            "id": "bbfa5ffb-f5e7-4547-a1c1-80b5f0414121",
-                            "type": "file",
-                            "content": {
-                                "id": "6fad2d07-6fe4-431c-a3b3-8c74946268ce",
-                                "origin_name": "数字工程所2025年研发计划.xlsx",
-                                "name": "6fad2d07-6fe4-431c-a3b3-8c74946268ce.xlsx",
-                                "path": "C:\\Users\\29193\\AppData\\Roaming\\knowledgeDev\\Data\\Files\\6fad2d07-6fe4-431c-a3b3-8c74946268ce.xlsx",
-                                "created_at": "2025-10-29T08:46:56.531Z",
-                                "size": 13334,
-                                "ext": ".xlsx",
-                                "type": "document",
-                                "count": 1
-                            },
-                            "created_at": 1761727616639,
-                            "updated_at": 1761727616639,
-                            "uniqueId": "LocalPathLoader_02c82d728865410929c9df6ac6171cfa",
-                            "uniqueIds": [
-                                "LocalPathLoader_02c82d728865410929c9df6ac6171cfa"
-                            ],
-                            "isPreprocessed": true
-                        }
-                    ],
-                    "created_at": 1761727605439,
-                    "updated_at": 1761727616640,
-                    "version": 1,
-                    "preprocessProvider": {
-                        "type": "preprocess",
-                        "provider": {
-                            "id": "mineru",
-                            "name": "MinerU",
-                            "apiKey": "",
-                            "apiHost": "https://mineru.net"
-                        }
-                    },
-                    "rerankModel": {
-                        "id": "BAAI/bge-reranker-v2-m3",
-                        "provider": "silicon",
-                        "name": "BAAI/bge-reranker-v2-m3",
-                        "group": "baai",
-                        "supported_text_delta": true
-                    }
-                }
-            ]
+        // ========== 配置管理 ==========
+        let config = {
+            apiUrl: '',
+            apiKey: '',
+            model: '',
+            assistantId: '',
+            knowledgeBases: []
         };
-        
-        // 智能 API 地址检测
+
+        let sessions = [];
+        let currentSessionId = null;
+
+        // 初始化
+        async function init() {
+            loadConfig();
+            loadSessions();
+            await fetchApiKey(); // 先获取API Key
+            
+            // 延迟100ms确保API Key已设置
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            // 然后再进行需要API Key的操作
+            updateStatus();
+            refreshModels();
+            refreshKnowledgeBases();
+            
+            if (sessions.length === 0) {
+                createNewSession();
+            } else {
+                switchSession(sessions[0].id);
+            }
+        }
+
+        // 智能API地址检测
         function getDefaultApiUrl() {
             const hostname = window.location.hostname;
-            
-            // 如果是通过 10.216.186.24 访问，使用同样的 IP
             if (hostname === '10.216.186.24') {
                 return 'http://10.216.186.24:8080';
             }
-            
-            // 如果是通过其他局域网 IP 访问，使用该 IP
             if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
                 return `http://${hostname}:8080`;
             }
-            
-            // 本机访问，默认使用 localhost
             return 'http://localhost:8080';
         }
 
-        // 从API服务器获取API Key
-        async function fetchApiKey(apiUrl) {
-            try {
-                const response = await fetch(`${apiUrl}/`);
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
-                }
-                const data = await response.json();
-                return data.apiKey || '';
-            } catch (error) {
-                console.error('获取API Key失败:', error);
-                return '';
-            }
-        }
-
-        // 初始化配置（首次访问时使用默认配置）
-        async function initializeConfig() {
-            const isFirstVisit = !localStorage.getItem('configInitialized');
-            
-            if (isFirstVisit) {
-                // 首次访问，使用默认配置
-                console.log('🎉 首次访问，加载默认配置...');
-                console.log('📚 知识库数量:', DEFAULT_ASSISTANT_CONFIG.knowledgeBases.length);
-                console.log('📄 包含文档:', DEFAULT_ASSISTANT_CONFIG.knowledgeBases[0]?.items.map(item => item.content.origin_name));
-                localStorage.setItem('assistantId', DEFAULT_ASSISTANT_CONFIG.assistantId);
-                localStorage.setItem('knowledgeBases', JSON.stringify(DEFAULT_ASSISTANT_CONFIG.knowledgeBases));
-                localStorage.setItem('configInitialized', 'true');
-                console.log('✅ 默认配置已加载 - 无需手动配置，即可开始使用！');
-            } else {
-                console.log('ℹ️ 使用已保存的配置');
-            }
-            
-            const apiUrl = localStorage.getItem('apiUrl') || getDefaultApiUrl();
-            console.log('🌐 API 地址:', apiUrl);
-            
-            // 获取API Key
-            const apiKey = await fetchApiKey(apiUrl);
-            if (apiKey) {
-                INTERNAL_API_KEY = apiKey;
-                console.log('🔑 API Key 已获取');
-            } else {
-                console.warn('⚠️ 无法获取 API Key, 部分功能可能不可用');
-            }
-            
-            return {
-                apiUrl: apiUrl,
-                model: localStorage.getItem('model') || 'deepseek-chat',
-                assistantId: localStorage.getItem('assistantId') || DEFAULT_ASSISTANT_CONFIG.assistantId,
-                knowledgeBases: JSON.parse(localStorage.getItem('knowledgeBases') || JSON.stringify(DEFAULT_ASSISTANT_CONFIG.knowledgeBases))
-            };
-        }
-
-        let config;
-        let availableModels = [];
-
-        // 异步初始化
-        (async function() {
-            config = await initializeConfig();
-            
-            // 初始化UI
-            document.getElementById('apiUrl').value = config.apiUrl;
-            document.getElementById('assistantId').value = config.assistantId;
-            updateStatus();
-            updateKnowledgeStatus(); // 初始化时更新知识库状态
-            refreshModels();
-            
-            // 自动加载知识库列表
-            await refreshKnowledgeBases();
-        })();
-
-        // 切换设置面板
-        function toggleSettings() {
-            const settings = document.getElementById('settings');
-            settings.classList.toggle('hidden');
-            if (!settings.classList.contains('hidden')) {
-                refreshModels();
-            }
-        }
-
-        // 导入助手配置
-        function importAssistantConfig() {
-            const textarea = document.getElementById('importConfig');
-            const configText = textarea.value.trim();
-            
-            if (!configText) {
-                alert('⚠️ 请粘贴配置内容');
-                return;
-            }
+        // 加载配置
+        function loadConfig() {
+            config.apiUrl = localStorage.getItem('apiUrl') || getDefaultApiUrl();
+            config.model = localStorage.getItem('model') || 'deepseek-chat';
+            config.assistantId = localStorage.getItem('assistantId') || '';
             
             try {
-                const importedConfig = JSON.parse(configText);
-                
-                // 验证配置结构
-                if (!importedConfig.assistantId) {
-                    throw new Error('配置中缺少 assistantId');
-                }
-                
-                // 更新配置
-                config.assistantId = importedConfig.assistantId;
-                config.knowledgeBases = importedConfig.knowledgeBases || [];
-                
-                // 更新 UI
-                document.getElementById('assistantId').value = config.assistantId;
-                
-                // 保存到 localStorage
-                saveSettings();
-                
-                // 清空输入框
-                textarea.value = '';
-                
-                // 显示成功消息
-                alert(`✅ 配置导入成功!\n\n助手: ${importedConfig.assistantName || '未命名'}\n助手ID: ${config.assistantId}\n知识库数量: ${config.knowledgeBases.length}\n\n配置已自动保存，现在可以开始对话了！`);
-                
-            } catch (error) {
-                alert(`❌ 配置导入失败\n\n错误: ${error.message}\n\n请确保粘贴的是从 Knowledge 应用导出的完整配置`);
-                console.error('导入配置失败:', error);
-            }
-        }
-
-        // 刷新模型列表
-        async function refreshModels() {
-            // 读取输入框的当前值
-            const apiUrl = document.getElementById('apiUrl').value.trim();
-
-            if (!apiUrl) {
-                const selectEl = document.getElementById('modelSelect');
-                selectEl.innerHTML = '<option value="">⚠️ 请先填写 API 地址</option>';
-                return;
-            }
-
-            const selectEl = document.getElementById('modelSelect');
-            selectEl.innerHTML = '<option value="">加载中...</option>';
-
-            try {
-                const response = await fetch(`${apiUrl}/v1/models`, {
-                    headers: {
-                        'Authorization': `Bearer ${INTERNAL_API_KEY}`
-                    }
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
-                }
-
-                const data = await response.json();
-                availableModels = data.data || [];
-
-                if (availableModels.length === 0) {
-                    selectEl.innerHTML = '<option value="">⚠️ 未找到模型，请在 Knowledge 应用中配置 LLM 服务商</option>';
-                    alert('⚠️ 重要提示\n\n未找到可用的模型！\n\n请先在 Knowledge 桌面应用中：\n1. 进入"设置" → "服务商"\n2. 添加并配置至少一个 LLM 服务商（如 OpenAI、Claude 等）\n3. 然后回到这里刷新模型列表');
-                    return;
-                }
-
-                selectEl.innerHTML = '';
-                availableModels.forEach(model => {
-                    const option = document.createElement('option');
-                    option.value = model.id;
-                    option.textContent = `${model.id} (${model.owned_by || 'unknown'})`;
-                    if (model.id === config.model) {
-                        option.selected = true;
-                    }
-                    selectEl.appendChild(option);
-                });
-
-                // 如果当前没有保存的模型，或保存的模型不在列表中，自动选择第一个（通常是置顶的模型）
-                if (!config.model || !availableModels.find(m => m.id === config.model)) {
-                    config.model = availableModels[0].id;
-                    selectEl.value = config.model;
-                    console.log('🎯 自动选择模型:', config.model);
-                }
-
-            } catch (error) {
-                selectEl.innerHTML = '<option value="">❌ 加载失败，请检查 API 设置</option>';
-                console.error('获取模型列表失败:', error);
-            }
-        }
-
-        // 刷新知识库列表
-        async function refreshKnowledgeBases() {
-            const apiUrl = document.getElementById('apiUrl').value.trim();
-
-            if (!apiUrl) {
-                alert('⚠️ 请先填写 API 地址');
-                return;
-            }
-
-            const selectEl = document.getElementById('knowledgeBaseSelect');
-            selectEl.innerHTML = '<option value="">🔄 加载中...</option>';
-
-            try {
-                const response = await fetch(`${apiUrl}/v1/knowledge`, {
-                    headers: {
-                        'Authorization': `Bearer ${INTERNAL_API_KEY}`
-                    }
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
-                }
-
-                const result = await response.json();
-                const knowledgeBases = result.data || [];
-
-                if (knowledgeBases.length === 0) {
-                    selectEl.innerHTML = '<option value="">📚 暂无知识库</option>';
-                    alert('ℹ️ 提示\n\n当前没有可用的知识库。\n\n请在 Knowledge 桌面应用中创建知识库并添加文档。');
-                    return;
-                }
-
-                // 清空并添加选项
-                selectEl.innerHTML = '<option value="">💬 普通对话 (不使用知识库)</option>';
-                
-                knowledgeBases.forEach(kb => {
-                    const option = document.createElement('option');
-                    option.value = kb.id;
-                    const docCount = kb.documentCount || 0;
-                    const modelInfo = kb.model ? ` - ${kb.model.name}` : '';
-                    option.textContent = `📚 ${kb.name} (${docCount}个文档${modelInfo})`;
-                    option.dataset.knowledgeBase = JSON.stringify(kb);
-                    selectEl.appendChild(option);
-                });
-
-                console.log(`✅ 加载了 ${knowledgeBases.length} 个知识库`);
-                
-                // 如果之前选择过知识库,恢复选择（只取第一个）
-                if (config.knowledgeBases && config.knowledgeBases.length > 0) {
-                    const savedKbId = config.knowledgeBases[0].id;
-                    selectEl.value = savedKbId;
-                    updateKnowledgeStatus();
-                }
-
-            } catch (error) {
-                selectEl.innerHTML = '<option value="">❌ 加载失败</option>';
-                console.error('获取知识库列表失败:', error);
-                alert(`❌ 加载知识库失败\n\n${error.message}\n\n请检查:\n1. API 地址是否正确\n2. Knowledge 应用是否正在运行\n3. 网络连接是否正常`);
-            }
-        }
-
-        // 获取当前选中的知识库
-        function getSelectedKnowledgeBases() {
-            const selectEl = document.getElementById('knowledgeBaseSelect');
-            const selectedValue = selectEl.value;
-            
-            // 如果没选择或选择了空值，返回空数组
-            if (!selectedValue || selectedValue === '') {
-                return [];
-            }
-            
-            // 获取选中option的data
-            const selectedOption = selectEl.options[selectEl.selectedIndex];
-            try {
-                const kb = JSON.parse(selectedOption.dataset.knowledgeBase);
-                return [kb];
+                config.knowledgeBases = JSON.parse(localStorage.getItem('knowledgeBases') || '[]');
             } catch (e) {
-                console.error('解析知识库数据失败:', e);
-                return [];
+                config.knowledgeBases = [];
             }
+            
+            document.getElementById('apiUrlInput').value = config.apiUrl;
         }
 
-        // 知识库选择变化时触发
-        function onKnowledgeBaseChange() {
-            const selectedKbs = getSelectedKnowledgeBases();
-            config.knowledgeBases = selectedKbs;
-            
-            // 保存到localStorage
-            localStorage.setItem('knowledgeBases', JSON.stringify(selectedKbs));
-            
-            // 更新顶部状态显示
-            updateKnowledgeStatus();
-            
-            // 提示用户
-            if (selectedKbs.length === 0) {
-                console.log('💬 切换到普通对话模式');
-            } else {
-                const kb = selectedKbs[0];
-                console.log(`📚 已切换到知识库: ${kb.name} (${kb.documentCount || 0}个文档)`);
-            }
-        }
-
-        // 测试连接
-        async function testConnection() {
-            // 读取输入框的当前值,而不是已保存的 config
-            const apiUrl = document.getElementById('apiUrl').value.trim();
-
-            if (!apiUrl) {
-                alert('❌ 请先填写 API 地址');
-                return;
-            }
-
-            try {
-                const response = await fetch(`${apiUrl}/v1/models`, {
-                    headers: {
-                        'Authorization': `Bearer ${INTERNAL_API_KEY}`
-                    }
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    const count = data.data ? data.data.length : 0;
-                    if (count > 0) {
-                        alert(`✅ 连接成功！\n\n找到 ${count} 个可用模型`);
-                    } else {
-                        alert('⚠️ 连接成功，但未找到模型\n\n请在 Knowledge 应用中配置 LLM 服务商');
-                    }
-                } else {
-                    alert(`❌ 连接失败\n\nHTTP ${response.status}: ${response.statusText}`);
-                }
-            } catch (error) {
-                alert(`❌ 连接失败\n\n${error.message}\n\n请检查：\n1. API 地址是否正确\n2. Knowledge 应用是否运行\n3. API Server 是否已启用`);
-            }
-        }
-
-        // 保存设置
-        function saveSettings() {
-            config.apiUrl = document.getElementById('apiUrl').value;
-            config.assistantId = document.getElementById('assistantId').value.trim();
-            const selectedModel = document.getElementById('modelSelect').value;
-            if (selectedModel) {
-                config.model = selectedModel;
-            }
-
-            // 保存选中的知识库
-            const selectedKbs = getSelectedKnowledgeBases();
-            config.knowledgeBases = selectedKbs;
-
+        // 保存配置
+        function saveConfig() {
             localStorage.setItem('apiUrl', config.apiUrl);
             localStorage.setItem('model', config.model);
             localStorage.setItem('assistantId', config.assistantId);
-            localStorage.setItem('knowledgeBases', JSON.stringify(config.knowledgeBases || []));
-
-            toggleSettings();
-            updateStatus();
-            updateKnowledgeStatus(); // 更新知识库状态显示
-            
-            let alertMsg = '✅ 设置已保存！\n\n当前模型: ' + config.model;
-            if (selectedKbs.length > 0) {
-                alertMsg += '\n📚 已选择 ' + selectedKbs.length + ' 个知识库:';
-                selectedKbs.forEach(kb => {
-                    alertMsg += '\n  • ' + kb.name + ' (' + (kb.documentCount || 0) + '个文档)';
-                });
-            } else {
-                alertMsg += '\n\n� 当前模式: 普通对话 (未使用知识库)';
-            }
-            alert(alertMsg);
+            localStorage.setItem('knowledgeBases', JSON.stringify(config.knowledgeBases));
         }
 
-        // 更新知识库状态显示
-        function updateKnowledgeStatus() {
-            const statusEl = document.getElementById('knowledgeStatus');
-            if (!statusEl) return;
-
-            const kbCount = config.knowledgeBases?.length || 0;
-            if (kbCount === 0) {
-                statusEl.textContent = '💬 当前模式: 普通对话';
-                statusEl.className = 'text-xs text-gray-500 mt-1';
-            } else if (kbCount === 1) {
-                const kb = config.knowledgeBases[0];
-                statusEl.textContent = `📚 知识库: ${kb.name} (${kb.documentCount || 0}个文档)`;
-                statusEl.className = 'text-xs text-blue-600 mt-1';
-            } else {
-                const totalDocs = config.knowledgeBases.reduce((sum, kb) => sum + (kb.documentCount || 0), 0);
-                statusEl.textContent = `📚 已选择 ${kbCount} 个知识库 (共${totalDocs}个文档)`;
-                statusEl.className = 'text-xs text-blue-600 mt-1';
-            }
+        // 获取API Key (使用固定的API Key)
+        async function fetchApiKey() {
+            // 使用固定的内部API Key
+            config.apiKey = 'sk-knowledge-internal-2024';
+            console.log('✅ API Key已设置');
         }
 
-        // 更新连接状态
-        async function updateStatus() {
-            const statusEl = document.getElementById('status');
+        // ========== 会话管理 ==========
+        function loadSessions() {
             try {
-                const response = await fetch(`${config.apiUrl}/v1/models`, {
-                    headers: {
-                        'Authorization': `Bearer ${INTERNAL_API_KEY}`
-                    }
-                });
-                if (response.ok) {
-                    const data = await response.json();
-                    const count = data.data ? data.data.length : 0;
-                    statusEl.textContent = count > 0 ? `✅ 已连接 (${count} 模型)` : '⚠️ 已连接 (无模型)';
-                    statusEl.className = count > 0 ? 'text-sm text-green-600' : 'text-sm text-yellow-600';
+                sessions = JSON.parse(localStorage.getItem('sessions') || '[]');
+            } catch (e) {
+                sessions = [];
+            }
+            renderSessions();
+        }
+
+        function saveSessions() {
+            localStorage.setItem('sessions', JSON.stringify(sessions));
+        }
+
+        function createNewSession() {
+            const session = {
+                id: Date.now().toString(),
+                title: '新对话',
+                messages: [],
+                createdAt: Date.now()
+            };
+            sessions.unshift(session);
+            saveSessions();
+            switchSession(session.id);
+            renderSessions();
+        }
+
+        function deleteSession(sessionId) {
+            if (!confirm('确定删除这个对话吗?')) return;
+            
+            sessions = sessions.filter(s => s.id !== sessionId);
+            saveSessions();
+            
+            if (currentSessionId === sessionId) {
+                if (sessions.length > 0) {
+                    switchSession(sessions[0].id);
                 } else {
-                    statusEl.textContent = '❌ 连接失败';
-                    statusEl.className = 'text-sm text-red-600';
-                }
-            } catch (error) {
-                statusEl.textContent = '❌ 无法连接';
-                statusEl.className = 'text-sm text-red-600';
-            }
-        }
-
-        // 添加消息到界面
-        function addMessage(content, isUser = false, citations = null) {
-            const messagesDiv = document.getElementById('messages');
-            const messageDiv = document.createElement('div');
-            messageDiv.className = isUser ? 'text-right' : '';
-
-            const bubble = document.createElement('div');
-            bubble.className = `p-4 rounded-lg ${isUser
-                    ? 'inline-block bg-blue-500 text-white max-w-xl ml-auto'
-                    : 'bg-white shadow-sm text-gray-800'
-                }`;
-            
-            // 用户消息使用纯文本,AI 消息使用 Markdown 渲染
-            if (isUser) {
-                bubble.textContent = content;
-            } else {
-                bubble.className += ' markdown-content';
-                // 配置 marked 选项
-                marked.setOptions({
-                    breaks: true, // 支持换行
-                    gfm: true, // GitHub Flavored Markdown
-                    highlight: function(code, lang) {
-                        if (lang && hljs.getLanguage(lang)) {
-                            try {
-                                return hljs.highlight(code, { language: lang }).value;
-                            } catch (err) {}
-                        }
-                        return hljs.highlightAuto(code).value;
-                    }
-                });
-                bubble.innerHTML = marked.parse(content);
-                // 渲染数学公式和引用
-                renderMathAndCitations(bubble);
-            }
-
-            messageDiv.appendChild(bubble);
-            
-            // 如果有引用数据,先过滤相似度低于 50% 的引用,然后将引用列表作为独立元素添加(AI消息才有引用)
-            if (!isUser && citations && citations.length > 0) {
-                // 过滤相似度低于 50% 的引用
-                const filteredCitations = citations.filter(c => {
-                    if (c.score === undefined) return true;
-                    return c.score >= 0.5;
-                });
-                
-                if (filteredCitations.length > 0) {
-                    const citationsList = createCitationsList(filteredCitations);
-                    citationsList.style.marginTop = '8px'; // 与消息气泡保持间距
-                    messageDiv.appendChild(citationsList);
+                    createNewSession();
                 }
             }
             
-            messagesDiv.appendChild(messageDiv);
-
-            // 滚动到底部
-            document.getElementById('chatContainer').scrollTop =
-                document.getElementById('chatContainer').scrollHeight;
+            renderSessions();
         }
 
-        // 清除所有聊天记录
-        function clearAllMessages() {
-            if (!confirm('确定要清除所有聊天记录吗？\n此操作不可恢复。')) {
+        function switchSession(sessionId) {
+            currentSessionId = sessionId;
+            renderMessages();
+            renderSessions();
+        }
+
+        function getCurrentSession() {
+            return sessions.find(s => s.id === currentSessionId);
+        }
+
+        function renderSessions() {
+            const list = document.getElementById('sessionsList');
+            list.innerHTML = sessions.map(session => `
+                <div class="session-item ${session.id === currentSessionId ? 'active' : ''}" 
+                     onclick="switchSession('${session.id}')">
+                    <div class="session-title">${session.title}</div>
+                    <button class="session-delete" onclick="event.stopPropagation(); deleteSession('${session.id}')">删除</button>
+                </div>
+            `).join('');
+        }
+
+        // ========== 消息渲染 ==========
+        function renderMessages() {
+            const container = document.getElementById('chatContainer');
+            const session = getCurrentSession();
+            
+            if (!session || session.messages.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">💬</div>
+                        <div class="empty-state-title">开始新的对话</div>
+                        <div class="empty-state-text">选择知识库或直接提问</div>
+                    </div>
+                `;
                 return;
             }
             
-            const messagesDiv = document.getElementById('messages');
-            // 清空所有消息
-            messagesDiv.innerHTML = '';
+            container.innerHTML = session.messages.map(msg => {
+                const isUser = msg.role === 'user';
+                return `
+                    <div class="message-group ${isUser ? 'user' : 'assistant'}">
+                        <div class="message-header">
+                            <div class="avatar ${isUser ? 'user' : 'assistant'}">${isUser ? '👤' : '🤖'}</div>
+                            <div class="message-name">${isUser ? '你' : 'AI助手'}</div>
+                            <div class="message-time">${formatTime(msg.timestamp)}</div>
+                        </div>
+                        <div class="message-content">
+                            <div class="markdown-body">${renderMarkdown(msg.content)}</div>
+                            ${msg.citations ? renderCitations(msg.citations) : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
             
-            // 重新添加欢迎消息
-            const welcomeDiv = document.createElement('div');
-            welcomeDiv.className = 'bg-white p-4 rounded-lg shadow-sm';
-            welcomeDiv.innerHTML = `
-                <div class="markdown-content text-gray-600">
-                    <p>👋 <strong>您好!</strong> 我是 Knowledge AI 助手，有什么可以帮您的吗？</p>
-                </div>
-            `;
-            messagesDiv.appendChild(welcomeDiv);
-            
-            // 提示用户
-            const notification = document.createElement('div');
-            notification.className = 'bg-green-50 border border-green-200 p-3 rounded-lg text-sm text-green-800';
-            notification.innerHTML = '✅ 聊天记录已清除，可以开始新的对话了';
-            messagesDiv.appendChild(notification);
-            
-            // 3秒后移除提示
-            setTimeout(() => {
-                notification.remove();
-            }, 3000);
-            
-            console.log('🗑️ 聊天记录已清除');
+            scrollToBottom();
         }
 
-        // 发送消息 (流式响应版本)
+        function renderMarkdown(text) {
+            marked.setOptions({
+                breaks: true,
+                gfm: true,
+                highlight: function(code, lang) {
+                    if (lang && hljs.getLanguage(lang)) {
+                        try {
+                            return hljs.highlight(code, { language: lang }).value;
+                        } catch (err) {}
+                    }
+                    return hljs.highlightAuto(code).value;
+                }
+            });
+            
+            let html = marked.parse(text);
+            
+            // 处理引用标注 [cite:1] -> <span class="citation">1</span>
+            html = html.replace(/\[(?:cite:)?(\d+)\]/g, '<span class="citation" onclick="scrollToCitation($1)">$1</span>');
+            
+            return html;
+        }
+
+        function renderCitations(citations) {
+            if (!citations || citations.length === 0) return '';
+            
+            // 过滤相似度低于50%的引用
+            const filtered = citations.filter(c => !c.score || c.score >= 0.5);
+            if (filtered.length === 0) return '';
+            
+            return `
+                <div class="citations-panel">
+                    <div class="citations-title">
+                        <span>📚</span>
+                        <span>引用来源 (${filtered.length})</span>
+                    </div>
+                    ${filtered.map((c, i) => `
+                        <div class="citation-item" id="citation-${i + 1}">
+                            <div class="citation-item-header">
+                                <div class="citation-number">${i + 1}</div>
+                                <div class="citation-item-title">${c.title || c.url || `引用 ${i + 1}`}</div>
+                                ${c.score ? `<div class="citation-score">${(c.score * 100).toFixed(1)}%</div>` : ''}
+                            </div>
+                            <div class="citation-preview">${c.content || '无预览内容'}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function scrollToCitation(num) {
+            const el = document.getElementById(`citation-${num}`);
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                el.style.borderColor = 'var(--primary-color)';
+                setTimeout(() => {
+                    el.style.borderColor = 'var(--border-color)';
+                }, 2000);
+            }
+        }
+
+        function formatTime(timestamp) {
+            const date = new Date(timestamp);
+            const now = new Date();
+            const diff = now - date;
+            
+            if (diff < 60000) return '刚刚';
+            if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`;
+            if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`;
+            
+            return date.toLocaleString('zh-CN', {
+                month: 'numeric',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        // ========== 发送消息 ==========
         async function sendMessage() {
             const input = document.getElementById('messageInput');
             const sendBtn = document.getElementById('sendBtn');
             const message = input.value.trim();
-
+            
             if (!message) return;
-
-            // 检查是否有可用模型
-            if (!config.model || config.model === '') {
-                alert('⚠️ 请先配置模型\n\n点击右上角 ⚙️ 设置，选择一个可用的模型');
-                toggleSettings();
+            if (!config.model) {
+                alert('请先在设置中选择模型');
+                openSettings();
                 return;
             }
-
+            
+            const session = getCurrentSession();
+            if (!session) {
+                createNewSession();
+                return sendMessage();
+            }
+            
             // 禁用输入
             input.disabled = true;
             sendBtn.disabled = true;
-
-            // 显示用户消息
-            addMessage(message, true);
-            input.value = '';
-
-            // 创建 AI 回复容器
-            const messagesDiv = document.getElementById('messages');
-            const messageDiv = document.createElement('div');
-            messageDiv.className = '';
-
-            const bubble = document.createElement('div');
-            bubble.className = 'p-4 rounded-lg bg-white shadow-sm text-gray-800 markdown-content';
-            bubble.id = 'streaming-message';
             
-            // 根据是否使用知识库显示不同的加载提示
-            const hasKnowledgeBase = config.knowledgeBases && config.knowledgeBases.length > 0;
-            bubble.innerHTML = hasKnowledgeBase 
-                ? '<span class="text-blue-600">🔍 正在搜索知识库...</span>'
-                : '<span class="text-gray-400">⏳ 正在思考...</span>';
-
-            messageDiv.appendChild(bubble);
-            messagesDiv.appendChild(messageDiv);
-
-            // 滚动到底部
-            const scrollToBottom = () => {
-                const container = document.getElementById('chatContainer');
-                container.scrollTop = container.scrollHeight;
+            // 添加用户消息
+            const userMessage = {
+                role: 'user',
+                content: message,
+                timestamp: Date.now()
             };
-            scrollToBottom();
-
+            session.messages.push(userMessage);
+            
+            // 更新标题
+            if (session.messages.length === 1) {
+                session.title = message.substring(0, 30) + (message.length > 30 ? '...' : '');
+            }
+            
+            saveSessions();
+            input.value = '';
+            renderMessages();
+            renderSessions();
+            
+            // 添加加载消息
+            const loadingMsg = {
+                role: 'assistant',
+                content: '',
+                timestamp: Date.now(),
+                isStreaming: true
+            };
+            session.messages.push(loadingMsg);
+            renderMessages();
+            
+            // 显示加载动画
+            const container = document.getElementById('chatContainer');
+            const lastMessage = container.lastElementChild;
+            const contentDiv = lastMessage.querySelector('.markdown-body');
+            contentDiv.innerHTML = '<div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>';
+            
             try {
-                // 构造请求体
+                // 构建请求
                 const requestBody = {
                     model: config.model,
-                    messages: [
-                        { role: 'user', content: message }
-                    ],
-                    stream: true  // 启用流式响应
+                    messages: session.messages.filter(m => !m.isStreaming).map(m => ({
+                        role: m.role,
+                        content: m.content
+                    })),
+                    stream: true
                 };
-
-                // 如果设置了助手ID，添加到请求中
+                
                 if (config.assistantId) {
                     requestBody.assistant_id = config.assistantId;
                 }
                 
-                // 如果有知识库配置，添加到请求中
+                // 如果使用知识库,实时获取完整数据（包含items信息）
                 if (config.knowledgeBases && config.knowledgeBases.length > 0) {
-                    requestBody.knowledge_bases = config.knowledgeBases;
+                    try {
+                        const kbResponse = await fetch(`${config.apiUrl}/v1/knowledge`, {
+                            headers: { 'Authorization': `Bearer ${config.apiKey}` }
+                        });
+                        if (kbResponse.ok) {
+                            const kbResult = await kbResponse.json();
+                            const allKbs = kbResult.data || [];
+                            // 只包含选中的知识库,并确保包含完整items数据
+                            requestBody.knowledge_bases = allKbs.filter(kb => 
+                                config.knowledgeBases.some(selected => selected.id === kb.id)
+                            );
+                            console.log('📚 Using knowledge bases:', requestBody.knowledge_bases.map(kb => ({
+                                id: kb.id,
+                                name: kb.name,
+                                itemCount: kb.items?.length || 0
+                            })));
+                        } else {
+                            // 降级到使用存储的数据
+                            requestBody.knowledge_bases = config.knowledgeBases;
+                        }
+                    } catch (e) {
+                        console.warn('Failed to fetch fresh KB data, using cached:', e);
+                        requestBody.knowledge_bases = config.knowledgeBases;
+                    }
                 }
-
-                // 详细日志
-                console.group('📤 发送流式请求');
-                console.log('URL:', `${config.apiUrl}/v1/chat/completions`);
-                console.log('Model:', config.model);
-                console.log('Stream:', true);
-                console.log('Assistant ID:', config.assistantId || '❌ 未设置');
-                console.log('Knowledge Bases:', config.knowledgeBases?.length || 0);
-                console.groupEnd();
-
-                // 记录开始时间
-                const startTime = Date.now();
-                let firstTokenTime = null;
-                let fullContent = '';
-                let citations = []; // 收集引用数据
-
-                // 调用 API (流式)
+                
+                // 发送请求
                 const response = await fetch(`${config.apiUrl}/v1/chat/completions`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${INTERNAL_API_KEY}`
+                        'Authorization': `Bearer ${config.apiKey}`
                     },
                     body: JSON.stringify(requestBody)
                 });
-
+                
                 if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error('❌ API 错误响应:', errorText);
-                    throw new Error(`API 错误 ${response.status}: ${errorText}`);
+                    throw new Error(`HTTP ${response.status}`);
                 }
-
+                
                 // 处理流式响应
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder();
+                let fullContent = '';
+                let citations = null;
                 
-                console.log('📥 开始接收流式数据...');
-
                 while (true) {
                     const { done, value } = await reader.read();
+                    if (done) break;
                     
-                    if (done) {
-                        console.log('✅ 流式响应完成');
-                        break;
-                    }
-
-                    // 解码数据块
                     const chunk = decoder.decode(value, { stream: true });
                     const lines = chunk.split('\n');
-
+                    
                     for (const line of lines) {
-                        if (line.trim() === '') continue;
-                        if (line.trim() === 'data: [DONE]') continue;
+                        if (!line.trim() || line.trim() === 'data: [DONE]') continue;
+                        if (!line.startsWith('data: ')) continue;
                         
-                        if (line.startsWith('data: ')) {
-                            try {
-                                const jsonStr = line.slice(6); // 移除 "data: " 前缀
-                                const data = JSON.parse(jsonStr);
-                                
-                                // 提取内容
-                                if (data.choices && data.choices[0]?.delta?.content) {
-                                    const content = data.choices[0].delta.content;
-                                    fullContent += content;
-                                    
-                                    // 记录首个 token 时间
-                                    if (!firstTokenTime) {
-                                        firstTokenTime = Date.now();
-                                        const timeToFirstToken = ((firstTokenTime - startTime) / 1000).toFixed(2);
-                                        console.log(`⚡ 首个 token 时间: ${timeToFirstToken} 秒`);
-                                    }
-                                    
-                                    // 实时渲染 Markdown
-                                    bubble.innerHTML = marked.parse(fullContent);
-                                    // 渲染数学公式和引用
-                                    renderMathAndCitations(bubble);
-                                    scrollToBottom();
-                                }
-                                
-                                // 提取引用数据 (如果有)
-                                if (data.choices && data.choices[0]?.message?.citations) {
-                                    // 过滤相似度低于 50% 的引用
-                                    const allCitations = data.choices[0].message.citations;
-                                    citations = allCitations.filter(c => {
-                                        // 如果没有 score 字段，保留该引用
-                                        if (c.score === undefined) return true;
-                                        // 只保留相似度 >= 0.5 (50%) 的引用
-                                        return c.score >= 0.5;
-                                    });
-                                    console.log(`📚 收到引用数据: ${allCitations.length} 个，过滤后: ${citations.length} 个 (>= 50%)`);
-                                }
-                            } catch (e) {
-                                // 忽略解析错误，继续处理下一行
+                        try {
+                            const data = JSON.parse(line.slice(6));
+                            
+                            if (data.choices && data.choices[0]?.delta?.content) {
+                                fullContent += data.choices[0].delta.content;
+                                loadingMsg.content = fullContent;
+                                contentDiv.innerHTML = renderMarkdown(fullContent);
+                                scrollToBottom();
                             }
+                            
+                            if (data.choices && data.choices[0]?.message?.citations) {
+                                citations = data.choices[0].message.citations.filter(c => !c.score || c.score >= 0.5);
+                            }
+                        } catch (e) {
+                            // Ignore parse errors
                         }
                     }
                 }
-
-                // 计算总时间
-                const endTime = Date.now();
-                const totalTime = ((endTime - startTime) / 1000).toFixed(2);
-                const generationTime = firstTokenTime ? ((endTime - firstTokenTime) / 1000).toFixed(2) : '0';
                 
-                console.group('📊 性能统计');
-                console.log(`⏱️ 总时间: ${totalTime} 秒`);
-                console.log(`⚡ 首个 token: ${((firstTokenTime - startTime) / 1000).toFixed(2)} 秒`);
-                console.log(`✍️ 生成时间: ${generationTime} 秒`);
-                console.log(`📝 内容长度: ${fullContent.length} 字符`);
-                console.log(`📚 引用数量: ${citations.length}`);
-                console.groupEnd();
-
-                // 移除临时 ID
-                bubble.removeAttribute('id');
-
-                // 添加引用列表(如果有引用数据)
-                if (citations && citations.length > 0) {
-                    const citationsList = createCitationsList(citations);
-                    citationsList.style.marginTop = '8px'; // 与消息气泡保持间距
-                    messageDiv.appendChild(citationsList);
-                }
-
+                // 完成
+                loadingMsg.isStreaming = false;
+                loadingMsg.citations = citations;
+                saveSessions();
+                renderMessages();
+                
             } catch (error) {
                 console.error('发送消息失败:', error);
-                
-                // 显示错误消息
-                const bubble = document.getElementById('streaming-message');
-                if (bubble) {
-                    let errorMsg = `❌ 错误: ${error.message}`;
-                    if (error.message.includes('API 错误')) {
-                        errorMsg += '\n\n可能的原因:\n1. 模型未配置或不可用\n2. API Key 错误\n3. 网络问题';
-                    }
-                    bubble.innerHTML = `<pre class="whitespace-pre-wrap">${errorMsg}</pre>`;
-                    bubble.removeAttribute('id');
-                }
+                session.messages.pop();
+                session.messages.push({
+                    role: 'assistant',
+                    content: `❌ 发送失败: ${error.message}`,
+                    timestamp: Date.now()
+                });
+                saveSessions();
+                renderMessages();
             } finally {
-                // 恢复输入
                 input.disabled = false;
                 sendBtn.disabled = false;
                 input.focus();
+                autoResizeTextarea(input);
             }
         }
 
-        // 创建引用列表
-        function createCitationsList(citations) {
-            const container = document.createElement('div');
-            container.className = 'citations-list';
+        // ========== 知识库管理 ==========
+        async function refreshKnowledgeBases() {
+            const select = document.getElementById('knowledgeBaseSelect');
+            select.innerHTML = '<option value="">加载中...</option>';
             
-            const title = document.createElement('div');
-            title.className = 'citations-list-title';
-            title.innerHTML = `
-                <span>📚</span>
-                <span>引用来源 (${citations.length})</span>
-            `;
-            container.appendChild(title);
-            
-            // 创建网格容器
-            const grid = document.createElement('div');
-            grid.style.cssText = `
-                display: grid;
-                grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
-                gap: 12px;
-            `;
-            
-            citations.forEach((citation, index) => {
-                const item = document.createElement('div');
-                item.className = 'citation-item';
-                item.onclick = () => showCitationDetailTooltip(citation, index + 1);
-                
-                const number = document.createElement('div');
-                number.className = 'citation-item-number';
-                number.textContent = index + 1;
-                
-                const content = document.createElement('div');
-                content.className = 'citation-item-content';
-                
-                const itemTitle = document.createElement('div');
-                itemTitle.className = 'citation-item-title';
-                itemTitle.textContent = citation.title || citation.url || `引用 ${index + 1}`;
-                
-                const preview = document.createElement('div');
-                preview.className = 'citation-item-preview';
-                preview.textContent = citation.content || '点击查看详情...';
-                
-                const meta = document.createElement('div');
-                meta.className = 'citation-item-meta';
-                
-                // 添加元数据
-                if (citation.type) {
-                    const typeSpan = document.createElement('span');
-                    typeSpan.textContent = citation.type === 'knowledge' ? '📄 知识库' : 
-                                          citation.type === 'websearch' ? '🔍 网络搜索' : '💾 记忆';
-                    meta.appendChild(typeSpan);
-                }
-                
-                if (citation.score !== undefined) {
-                    const scoreSpan = document.createElement('span');
-                    scoreSpan.textContent = `相似度: ${(citation.score * 100).toFixed(1)}%`;
-                    meta.appendChild(scoreSpan);
-                }
-                
-                content.appendChild(itemTitle);
-                content.appendChild(preview);
-                if (meta.children.length > 0) {
-                    content.appendChild(meta);
-                }
-                
-                item.appendChild(number);
-                item.appendChild(content);
-                grid.appendChild(item);
-            });
-            
-            container.appendChild(grid);
-            return container;
-        }
-
-        // 显示引用详细信息弹窗
-        function showCitationDetailTooltip(citation, number) {
-            // 移除已存在的弹窗
-            if (currentTooltip) {
-                currentTooltip.remove();
-            }
-
-            const tooltip = document.createElement('div');
-            tooltip.className = 'citation-tooltip show';
-            
-            tooltip.innerHTML = `
-                <div class="citation-tooltip-header">
-                    <span class="citation-tooltip-icon">${citation.type === 'knowledge' ? '📄' : '🔍'}</span>
-                    <div class="citation-title">${citation.title || `引用 ${number}`}</div>
-                    <span class="citation-badge">引用 ${number}</span>
-                </div>
-                <div class="citation-content">
-                    ${citation.content || '无内容预览'}
-                </div>
-                <div class="citation-url">
-                    <span>${citation.type === 'knowledge' ? '📑' : '🌐'}</span>
-                    <span>${citation.url || citation.title || '来源: 知识库'}</span>
-                </div>
-            `;
-            
-            // 居中显示
-            tooltip.style.left = '50%';
-            tooltip.style.top = '50%';
-            tooltip.style.transform = 'translate(-50%, -50%)';
-            
-            // 点击弹窗外关闭
-            setTimeout(() => {
-                document.addEventListener('click', function closeTooltip(e) {
-                    if (!tooltip.contains(e.target)) {
-                        tooltip.remove();
-                        currentTooltip = null;
-                        document.removeEventListener('click', closeTooltip);
-                    }
+            try {
+                const response = await fetch(`${config.apiUrl}/v1/knowledge`, {
+                    headers: { 'Authorization': `Bearer ${config.apiKey}` }
                 });
-            }, 10);
-            
-            document.body.appendChild(tooltip);
-            currentTooltip = tooltip;
+                
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                const result = await response.json();
+                const kbs = result.data || [];
+                
+                select.innerHTML = '<option value="">💬 普通对话</option>';
+                kbs.forEach(kb => {
+                    const option = document.createElement('option');
+                    option.value = kb.id;
+                    option.textContent = `📚 ${kb.name} (${kb.documentCount || 0}个文档)`;
+                    option.dataset.kb = JSON.stringify(kb);
+                    select.appendChild(option);
+                });
+                
+                // 恢复选择
+                if (config.knowledgeBases && config.knowledgeBases.length > 0) {
+                    select.value = config.knowledgeBases[0].id;
+                }
+            } catch (error) {
+                console.error('加载知识库失败:', error);
+                select.innerHTML = '<option value="">❌ 加载失败</option>';
+            }
         }
 
-        // 渲染数学公式和引用标注
-        function renderMathAndCitations(element) {
-            // 1. 渲染 KaTeX 数学公式
-            if (window.renderMathInElement) {
+        function onKnowledgeBaseChange() {
+            const select = document.getElementById('knowledgeBaseSelect');
+            const selectedOption = select.options[select.selectedIndex];
+            
+            if (selectedOption.dataset.kb) {
                 try {
-                    renderMathInElement(element, {
-                        delimiters: [
-                            {left: '$$', right: '$$', display: true},
-                            {left: '$', right: '$', display: false},
-                            {left: '\\[', right: '\\]', display: true},
-                            {left: '\\(', right: '\\)', display: false}
-                        ],
-                        throwOnError: false,
-                        errorColor: '#cc0000',
-                        strict: false
+                    const kb = JSON.parse(selectedOption.dataset.kb);
+                    // 保存完整的知识库数据（包含items）
+                    config.knowledgeBases = [kb];
+                    console.log('📚 Selected knowledge base:', {
+                        id: kb.id,
+                        name: kb.name,
+                        itemCount: kb.items?.length || 0
                     });
                 } catch (e) {
-                    console.warn('KaTeX 渲染失败:', e);
+                    config.knowledgeBases = [];
                 }
+            } else {
+                config.knowledgeBases = [];
             }
-
-            // 2. 处理引用标注 [cite:N] 或 [N]
-            processCitations(element);
+            
+            saveConfig();
         }
 
-        // 处理引用标注
-        function processCitations(element) {
-            // 查找所有引用标记: [cite:1], [1], [2] 等
-            const citationRegex = /\[(?:cite:)?(\d+)\]/g;
-            
-            // 遍历所有文本节点
-            const walker = document.createTreeWalker(
-                element,
-                NodeFilter.SHOW_TEXT,
-                {
-                    acceptNode: function(node) {
-                        // 跳过 code 和 pre 标签内的文本
-                        if (node.parentElement.tagName === 'CODE' || 
-                            node.parentElement.tagName === 'PRE') {
-                            return NodeFilter.FILTER_REJECT;
-                        }
-                        return citationRegex.test(node.textContent) ? 
-                            NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
-                    }
-                }
-            );
-
-            const textNodes = [];
-            while (walker.nextNode()) {
-                textNodes.push(walker.currentNode);
-            }
-
-            // 替换文本节点中的引用标记
-            textNodes.forEach(node => {
-                const parent = node.parentElement;
-                const text = node.textContent;
-                const fragment = document.createDocumentFragment();
-                
-                let lastIndex = 0;
-                let match;
-                citationRegex.lastIndex = 0; // 重置正则
-                
-                while ((match = citationRegex.exec(text)) !== null) {
-                    const citationNum = match[1];
-                    
-                    // 添加引用前的文本
-                    if (match.index > lastIndex) {
-                        fragment.appendChild(
-                            document.createTextNode(text.slice(lastIndex, match.index))
-                        );
-                    }
-                    
-                    // 创建引用标签
-                    const citation = document.createElement('span');
-                    citation.className = 'citation';
-                    citation.textContent = citationNum;
-                    citation.dataset.citationId = citationNum;
-                    citation.title = `点击查看引用 #${citationNum}`;
-                    
-                    // 添加点击事件
-                    citation.addEventListener('click', function(e) {
-                        showCitationTooltip(e, citationNum);
-                    });
-                    
-                    fragment.appendChild(citation);
-                    lastIndex = match.index + match[0].length;
-                }
-                
-                // 添加剩余文本
-                if (lastIndex < text.length) {
-                    fragment.appendChild(document.createTextNode(text.slice(lastIndex)));
-                }
-                
-                // 替换原文本节点
-                if (fragment.childNodes.length > 0) {
-                    parent.replaceChild(fragment, node);
-                }
-            });
+        // ========== UI交互 ==========
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('collapsed');
         }
 
-        // 显示引用弹窗
-        let currentTooltip = null;
-        function showCitationTooltip(event, citationId) {
-            // 移除已存在的弹窗
-            if (currentTooltip) {
-                currentTooltip.remove();
-            }
+        function clearCurrentChat() {
+            const session = getCurrentSession();
+            if (!session) return;
+            
+            if (!confirm('确定清空当前对话吗?')) return;
+            
+            session.messages = [];
+            saveSessions();
+            renderMessages();
+        }
 
-            // 创建弹窗
-            const tooltip = document.createElement('div');
-            tooltip.className = 'citation-tooltip show';
+        function openSettings() {
+            document.getElementById('settingsModal').classList.add('show');
+            refreshModels();
+        }
+
+        function closeSettings() {
+            document.getElementById('settingsModal').classList.remove('show');
+        }
+
+        function saveSettings() {
+            config.apiUrl = document.getElementById('apiUrlInput').value.trim();
+            config.model = document.getElementById('modelSelect').value;
             
-            // 这里可以从 API 响应中获取真实的引用信息
-            // 目前显示占位信息
-            tooltip.innerHTML = `
-                <div class="citation-tooltip-header">
-                    <span class="citation-tooltip-icon">📄</span>
-                    <div class="citation-title">知识库引用 #${citationId}</div>
-                    <span class="citation-badge">引用 ${citationId}</span>
-                </div>
-                <div class="citation-content">
-                    <p><strong>正在加载引用内容...</strong></p>
-                    <p style="margin-top: 8px; color: #9ca3af; font-size: 0.9em;">
-                        💡 <em>实际引用信息将从知识库检索结果中提取</em>
-                    </p>
-                    <p style="margin-top: 8px; color: #6b7280;">
-                        该引用来自知识库文档,包含相关段落内容和上下文信息。
-                        当 API 返回 citations 数据时,这里将显示具体的引用片段。
-                    </p>
-                </div>
-                <div class="citation-url">
-                    <span>📑</span>
-                    <span>来源: 知识库文档</span>
-                </div>
-            `;
+            saveConfig();
+            fetchApiKey();
+            updateStatus();
+            closeSettings();
             
-            // 定位弹窗
-            const rect = event.target.getBoundingClientRect();
-            const tooltipWidth = 400; // 预估宽度
-            
-            // 计算水平位置 (优先右侧,不够则左侧)
-            let left = rect.left;
-            if (left + tooltipWidth > window.innerWidth) {
-                left = Math.max(10, window.innerWidth - tooltipWidth - 10);
+            alert('设置已保存');
+        }
+
+        async function testConnection() {
+            const apiUrl = document.getElementById('apiUrlInput').value.trim();
+            if (!apiUrl) {
+                alert('请输入API地址');
+                return;
             }
             
-            // 计算垂直位置 (优先下方,不够则上方)
-            let top = rect.bottom + 8;
-            if (top + 300 > window.innerHeight) {
-                top = rect.top - 8;
-                tooltip.style.transform = 'translateY(-100%)';
-            }
-            
-            tooltip.style.left = `${left}px`;
-            tooltip.style.top = `${top}px`;
-            
-            // 点击弹窗外关闭
-            setTimeout(() => {
-                document.addEventListener('click', function closeTooltip(e) {
-                    if (!tooltip.contains(e.target)) {
-                        tooltip.remove();
-                        currentTooltip = null;
-                        document.removeEventListener('click', closeTooltip);
-                    }
+            try {
+                const response = await fetch(`${apiUrl}/v1/models`, {
+                    headers: { 'Authorization': `Bearer ${config.apiKey}` }
                 });
-            }, 10);
-            
-            document.body.appendChild(tooltip);
-            currentTooltip = tooltip;
-
-            // 防止立即触发关闭
-            event.stopPropagation();
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    alert(`✅ 连接成功!\n找到 ${data.data?.length || 0} 个模型`);
+                } else {
+                    alert(`❌ 连接失败\nHTTP ${response.status}`);
+                }
+            } catch (error) {
+                alert(`❌ 连接失败\n${error.message}`);
+            }
         }
 
-        // 定期检查连接状态
+        async function refreshModels() {
+            const select = document.getElementById('modelSelect');
+            select.innerHTML = '<option value="">加载中...</option>';
+            
+            try {
+                const response = await fetch(`${config.apiUrl}/v1/models`, {
+                    headers: { 'Authorization': `Bearer ${config.apiKey}` }
+                });
+                
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                const data = await response.json();
+                const models = data.data || [];
+                
+                if (models.length === 0) {
+                    select.innerHTML = '<option value="">未找到模型</option>';
+                    return;
+                }
+                
+                select.innerHTML = '';
+                models.forEach(model => {
+                    const option = document.createElement('option');
+                    option.value = model.id;
+                    option.textContent = `${model.id} (${model.owned_by || 'unknown'})`;
+                    if (model.id === config.model) option.selected = true;
+                    select.appendChild(option);
+                });
+                
+                if (!config.model && models.length > 0) {
+                    config.model = models[0].id;
+                    select.value = config.model;
+                }
+            } catch (error) {
+                console.error('加载模型失败:', error);
+                select.innerHTML = '<option value="">❌ 加载失败</option>';
+            }
+        }
+
+        async function updateStatus() {
+            const badge = document.getElementById('statusBadge');
+            
+            try {
+                const response = await fetch(`${config.apiUrl}/v1/models`, {
+                    headers: { 'Authorization': `Bearer ${config.apiKey}` }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    const count = data.data?.length || 0;
+                    badge.textContent = count > 0 ? `✅ 已连接 (${count})` : '⚠️ 无模型';
+                    badge.className = count > 0 ? 'status-badge' : 'status-badge offline';
+                } else {
+                    badge.textContent = '❌ 连接失败';
+                    badge.className = 'status-badge offline';
+                }
+            } catch (error) {
+                badge.textContent = '❌ 未连接';
+                badge.className = 'status-badge offline';
+            }
+        }
+
+        // ========== 输入框辅助 ==========
+        function handleInputKeydown(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        }
+
+        function autoResizeTextarea(textarea) {
+            textarea.style.height = 'auto';
+            textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px';
+        }
+
+        function scrollToBottom() {
+            const container = document.getElementById('chatContainer');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // 定时更新状态
         setInterval(updateStatus, 30000);
+
+        // 初始化应用
+        init();
     </script>
 </body>
-
 </html>
-

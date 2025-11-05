@@ -38,14 +38,36 @@ function getOriginalFileName(
 			// Check file type items
 			if (item.type === "file" && typeof item.content === "object") {
 				const fileContent = item.content as any;
-				// Match by file ID
-				if (fileContent.id === fileId || fileContent.name?.includes(fileId)) {
+
+				// Try multiple matching strategies
+				// 1. Match by file ID
+				if (fileContent.id === fileId) {
+					logger.info(
+						`✓ Matched by ID: ${fileId} -> ${fileContent.origin_name}`,
+					);
 					return fileContent.origin_name || fileContent.name;
+				}
+
+				// 2. Match by name containing fileId
+				if (fileContent.name?.includes(fileId)) {
+					logger.info(
+						`✓ Matched by name: ${fileId} -> ${fileContent.origin_name}`,
+					);
+					return fileContent.origin_name || fileContent.name;
+				}
+
+				// 3. Match by origin_name (if it was renamed to GUID)
+				if (fileContent.origin_name && fileId.includes(fileContent.id)) {
+					logger.info(
+						`✓ Matched by reverse lookup: ${fileId} -> ${fileContent.origin_name}`,
+					);
+					return fileContent.origin_name;
 				}
 			}
 		}
 	}
 
+	logger.warn(`✗ No match found for fileId: ${fileId}`);
 	return null;
 }
 
@@ -293,7 +315,29 @@ router.post("/completions", async (req: Request, res: Response) => {
 					if (isFirstChunk && (request as any).knowledgeSearchResults) {
 						const searchResults = (request as any).knowledgeSearchResults;
 
-						const citations = searchResults.map(
+						logger.info(
+							`🔍 Processing citations for ${searchResults.length} results`,
+						);
+						logger.info(`📋 Knowledge bases provided:`, {
+							count: request.knowledge_bases?.length || 0,
+							items: request.knowledge_bases?.map((kb) => ({
+								id: kb.id,
+								name: kb.name,
+								itemCount: kb.items?.length || 0,
+								firstItem: kb.items?.[0]
+									? {
+											type: kb.items[0].type,
+											hasContent: !!kb.items[0].content,
+											contentId: (kb.items[0].content as any)?.id,
+											contentName: (kb.items[0].content as any)?.name,
+											contentOriginName: (kb.items[0].content as any)
+												?.origin_name,
+										}
+									: null,
+							})),
+						});
+
+						const allCitations = searchResults.map(
 							(result: any, index: number) => {
 								// Extract filename from source path
 								let title = `文档${index + 1}`;
@@ -304,6 +348,10 @@ router.post("/completions", async (req: Request, res: Response) => {
 									// Extract file ID (GUID) from filename like "abc-123-xyz.pdf"
 									const fileId = guidFilename.split(".")[0];
 
+									logger.info(
+										`🔎 Looking for fileId: ${fileId} in guidFilename: ${guidFilename}`,
+									);
+
 									// Try to find original filename from knowledge base items
 									const originalName = getOriginalFileName(
 										request.knowledge_bases,
@@ -312,9 +360,11 @@ router.post("/completions", async (req: Request, res: Response) => {
 
 									if (originalName) {
 										title = originalName;
+										logger.debug(`✓ Found original name: ${originalName}`);
 									} else if (guidFilename) {
 										// Fallback to GUID filename if origin_name not found
 										title = guidFilename;
+										logger.warn(`✗ Using GUID as fallback: ${guidFilename}`);
 									}
 								}
 
@@ -327,6 +377,22 @@ router.post("/completions", async (req: Request, res: Response) => {
 									url: result.metadata?.source || "",
 								};
 							},
+						);
+
+						// 去重:相同文档只保留分数最高的一条
+						const citationMap = new Map<string, any>();
+						allCitations.forEach((citation) => {
+							const existing = citationMap.get(citation.title);
+							if (!existing || citation.score > existing.score) {
+								citationMap.set(citation.title, citation);
+							}
+						});
+						const citations = Array.from(citationMap.values())
+							.sort((a, b) => b.score - a.score) // 按分数降序排列
+							.map((citation, index) => ({ ...citation, id: index + 1 })); // 重新分配ID
+
+						logger.info(
+							`🔍 Deduplicated citations: ${allCitations.length} → ${citations.length}`,
 						);
 
 						// Add citations to the first chunk
@@ -369,7 +435,7 @@ router.post("/completions", async (req: Request, res: Response) => {
 		if ((request as any).knowledgeSearchResults) {
 			const searchResults = (request as any).knowledgeSearchResults;
 
-			const citations = searchResults.map((result: any, index: number) => {
+			const allCitations = searchResults.map((result: any, index: number) => {
 				// Extract filename from source path
 				let title = `文档${index + 1}`;
 				if (result.metadata?.source) {
@@ -402,6 +468,22 @@ router.post("/completions", async (req: Request, res: Response) => {
 					url: result.metadata?.source || "",
 				};
 			});
+
+			// 去重:相同文档只保留分数最高的一条
+			const citationMap = new Map<string, any>();
+			allCitations.forEach((citation) => {
+				const existing = citationMap.get(citation.title);
+				if (!existing || citation.score > existing.score) {
+					citationMap.set(citation.title, citation);
+				}
+			});
+			const citations = Array.from(citationMap.values())
+				.sort((a, b) => b.score - a.score) // 按分数降序排列
+				.map((citation, index) => ({ ...citation, id: index + 1 })); // 重新分配ID
+
+			logger.info(
+				`🔍 Deduplicated citations (non-stream): ${allCitations.length} → ${citations.length}`,
+			);
 
 			if (response.choices && response.choices[0]?.message) {
 				(response.choices[0].message as any).citations = citations;
