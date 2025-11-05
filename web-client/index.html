@@ -548,6 +548,139 @@
             box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
         }
 
+        /* Document List Dropdown */
+        .doc-list-wrapper {
+            position: relative;
+            flex: 1;
+            display: none;  /* 默认隐藏 */
+        }
+
+        .doc-list-trigger {
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            user-select: none;
+        }
+
+        .doc-list-trigger:hover {
+            border-color: var(--primary-color);
+            background: var(--bg-tertiary);
+        }
+
+        .doc-list-trigger.active {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .doc-list-trigger-text {
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .doc-list-arrow {
+            font-size: 12px;
+            color: var(--text-tertiary);
+            transition: transform 0.2s;
+        }
+
+        .doc-list-arrow.open {
+            transform: rotate(180deg);
+        }
+
+        .doc-list-dropdown {
+            position: absolute;
+            top: calc(100% + 4px);
+            left: 0;
+            right: 0;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            box-shadow: var(--shadow-lg);
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 100;
+            display: none;
+        }
+
+        .doc-list-dropdown.show {
+            display: block;
+            animation: dropdownSlideIn 0.2s ease;
+        }
+
+        @keyframes dropdownSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-8px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .doc-item {
+            padding: 10px 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.2s;
+            cursor: default;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .doc-item:last-child {
+            border-bottom: none;
+        }
+
+        .doc-item:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .doc-icon {
+            font-size: 16px;
+            width: 24px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .doc-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .doc-name {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .doc-meta {
+            font-size: 11px;
+            color: var(--text-tertiary);
+            margin-top: 2px;
+        }
+
+        .doc-list-empty {
+            padding: 20px;
+            text-align: center;
+            color: var(--text-tertiary);
+            font-size: 13px;
+        }
+
         .input-wrapper {
             display: flex;
             gap: 12px;
@@ -901,6 +1034,16 @@
                         <select id="knowledgeBaseSelect" onchange="onKnowledgeBaseChange()">
                             <option value="">💬 普通对话</option>
                         </select>
+                        <!-- 文档列表下拉框 -->
+                        <div class="doc-list-wrapper" id="docListWrapper">
+                            <div class="doc-list-trigger" id="docListTrigger" onclick="toggleDocList(event)">
+                                <span class="doc-list-trigger-text" id="docListTriggerText">📄 查看文档</span>
+                                <span class="doc-list-arrow" id="docListArrow">▼</span>
+                            </div>
+                            <div class="doc-list-dropdown" id="docListDropdown">
+                                <div id="docListItems"></div>
+                            </div>
+                        </div>
                         <button class="icon-btn" onclick="refreshKnowledgeBases()" title="刷新知识库">🔄</button>
                     </div>
                     <div class="input-wrapper">
@@ -1403,13 +1546,26 @@
                     select.appendChild(option);
                 });
                 
-                // 恢复选择
+                // 恢复选择并触发显示文档列表
                 if (config.knowledgeBases && config.knowledgeBases.length > 0) {
                     select.value = config.knowledgeBases[0].id;
+                    // 手动触发显示文档列表
+                    const selectedOption = select.options[select.selectedIndex];
+                    if (selectedOption.dataset.kb) {
+                        try {
+                            const kb = JSON.parse(selectedOption.dataset.kb);
+                            showDocumentList(kb);
+                        } catch (e) {
+                            console.error('解析知识库数据失败:', e);
+                        }
+                    }
+                } else {
+                    hideDocumentList();
                 }
             } catch (error) {
                 console.error('加载知识库失败:', error);
                 select.innerHTML = '<option value="">❌ 加载失败</option>';
+                hideDocumentList();
             }
         }
 
@@ -1427,14 +1583,141 @@
                         name: kb.name,
                         itemCount: kb.items?.length || 0
                     });
+                    // 显示文档列表
+                    showDocumentList(kb);
                 } catch (e) {
                     config.knowledgeBases = [];
+                    hideDocumentList();
                 }
             } else {
                 config.knowledgeBases = [];
+                hideDocumentList();
             }
             
             saveConfig();
+        }
+
+        // ========== 文档列表管理 ==========
+        function showDocumentList(kb) {
+            const wrapper = document.getElementById('docListWrapper');
+            const triggerText = document.getElementById('docListTriggerText');
+            const itemsContainer = document.getElementById('docListItems');
+            
+            // 获取文档列表
+            const docs = kb.items?.filter(item => item.type === 'file' && item.content) || [];
+            
+            console.log('📄 显示文档列表:', {
+                kbName: kb.name,
+                totalItems: kb.items?.length || 0,
+                fileItems: docs.length,
+                items: docs.map(d => d.content?.origin_name || d.content?.name)
+            });
+            
+            // 更新触发按钮文本
+            triggerText.textContent = `📄 查看文档 (${docs.length})`;
+            
+            // 显示文档列表容器
+            wrapper.style.display = 'block';
+            
+            // 渲染文档列表
+            if (docs.length === 0) {
+                itemsContainer.innerHTML = '<div class="doc-list-empty">该知识库暂无文档</div>';
+            } else {
+                itemsContainer.innerHTML = docs.map(item => {
+                    const doc = item.content;
+                    const icon = getDocIcon(doc.ext || '');
+                    const name = doc.origin_name || doc.name || '未知文档';
+                    const ext = (doc.ext || '').toUpperCase();
+                    
+                    return `
+                        <div class="doc-item" title="${name}">
+                            <div class="doc-icon">${icon}</div>
+                            <div class="doc-info">
+                                <div class="doc-name">${name}</div>
+                                <div class="doc-meta">${ext ? ext + ' 文件' : '文档'}</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        function hideDocumentList() {
+            const wrapper = document.getElementById('docListWrapper');
+            const dropdown = document.getElementById('docListDropdown');
+            const trigger = document.getElementById('docListTrigger');
+            const arrow = document.getElementById('docListArrow');
+            
+            // 隐藏容器
+            wrapper.style.display = 'none';
+            
+            // 关闭下拉菜单
+            dropdown.classList.remove('show');
+            trigger.classList.remove('active');
+            arrow.classList.remove('open');
+        }
+
+        function toggleDocList(event) {
+            event.stopPropagation();
+            
+            const dropdown = document.getElementById('docListDropdown');
+            const trigger = document.getElementById('docListTrigger');
+            const arrow = document.getElementById('docListArrow');
+            
+            const isOpen = dropdown.classList.contains('show');
+            
+            if (isOpen) {
+                dropdown.classList.remove('show');
+                trigger.classList.remove('active');
+                arrow.classList.remove('open');
+            } else {
+                dropdown.classList.add('show');
+                trigger.classList.add('active');
+                arrow.classList.add('open');
+            }
+        }
+
+        // 点击外部关闭下拉菜单
+        document.addEventListener('click', function(event) {
+            const wrapper = document.getElementById('docListWrapper');
+            const dropdown = document.getElementById('docListDropdown');
+            const trigger = document.getElementById('docListTrigger');
+            const arrow = document.getElementById('docListArrow');
+            
+            if (wrapper && !wrapper.contains(event.target)) {
+                dropdown.classList.remove('show');
+                trigger.classList.remove('active');
+                arrow.classList.remove('open');
+            }
+        });
+
+        function getDocIcon(ext) {
+            const extLower = ext.toLowerCase();
+            const iconMap = {
+                'pdf': '📕',
+                'doc': '📘',
+                'docx': '📘',
+                'txt': '📄',
+                'md': '📝',
+                'xls': '📊',
+                'xlsx': '📊',
+                'csv': '📊',
+                'ppt': '📙',
+                'pptx': '📙',
+                'jpg': '🖼️',
+                'jpeg': '🖼️',
+                'png': '🖼️',
+                'gif': '🖼️',
+                'html': '🌐',
+                'htm': '🌐',
+                'json': '📋',
+                'xml': '📋',
+                'zip': '📦',
+                'rar': '📦',
+                '7z': '📦'
+            };
+            
+            return iconMap[extLower] || '📄';
         }
 
         // ========== UI交互 ==========
