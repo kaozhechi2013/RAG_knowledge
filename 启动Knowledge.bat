@@ -27,7 +27,8 @@ echo [INFO] Please wait for API initialization...
 echo.
 
 REM Start main application (includes API server on port 8080)
-start "Knowledge Desktop" cmd /c "yarn dev"
+echo [INFO] Starting Electron and API Server in background...
+start /B cmd /c "yarn dev >nul 2>&1"
 
 REM Wait for API server to be ready (check every 2 seconds, max 30 seconds)
 echo.
@@ -66,10 +67,10 @@ REM Check Python availability
 python --version >nul 2>&1
 if %errorlevel% equ 0 (
     echo [INFO] Using Python http.server
-    start "Knowledge Web Server" /MIN cmd /c "cd /d "%~dp0\web-client" && python -m http.server 8081 --bind 0.0.0.0 || pause"
+    start /B cmd /c "cd /d "%~dp0\web-client" && python -m http.server 8081 --bind 0.0.0.0 >nul 2>&1"
 ) else (
     echo [WARN] Python not found, using Node.js http-server...
-    start "Knowledge Web Server" /MIN cmd /c "cd /d "%~dp0\web-client" && npx http-server -p 8081 -a 0.0.0.0 || pause"
+    start /B cmd /c "cd /d "%~dp0\web-client" && npx http-server -p 8081 -a 0.0.0.0 >nul 2>&1"
 )
 
 REM Wait 2 seconds for Web server to start
@@ -99,4 +100,15 @@ start http://localhost:8081/index.html
 echo.
 echo Press any key to stop all services...
 pause >nul
+
+REM Stop all background services
+echo.
+echo Stopping services...
+taskkill /F /IM electron.exe >nul 2>&1
+taskkill /F /IM python.exe /FI "WINDOWTITLE eq python -m http.server*" >nul 2>&1
+taskkill /F /IM node.exe /FI "WINDOWTITLE eq npx http-server*" >nul 2>&1
+for /f "tokens=5" %%p in ('netstat -ano ^| findstr ":8080"') do taskkill /F /PID %%p >nul 2>&1
+for /f "tokens=5" %%p in ('netstat -ano ^| findstr ":8081"') do taskkill /F /PID %%p >nul 2>&1
+echo All services stopped.
+timeout /t 2 /nobreak >nul
 
