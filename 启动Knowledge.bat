@@ -26,12 +26,19 @@ if %errorlevel% equ 0 (
     timeout /t 1 /nobreak >nul
 )
 
-REM Start Web server in background
+REM Check Python availability
 echo [1/2] Starting Modern Web Client (port 8081)...
-start /B "" cmd /c "cd /d "%~dp0\web-client" && python -m http.server 8081 --bind 0.0.0.0 >nul 2>&1"
+python --version >nul 2>&1
+if %errorlevel% equ 0 (
+    echo [INFO] Using Python http.server
+    start "Knowledge Web Server" /MIN cmd /c "cd /d "%~dp0\web-client" && python -m http.server 8081 --bind 0.0.0.0 || pause"
+) else (
+    echo [WARN] Python not found, trying npx http-server...
+    start "Knowledge Web Server" /MIN cmd /c "cd /d "%~dp0\web-client" && npx http-server -p 8081 -a 0.0.0.0 || pause"
+)
 
-REM Wait 2 seconds for Web server to start
-timeout /t 2 /nobreak >nul
+REM Wait 3 seconds for Web server to start
+timeout /t 3 /nobreak >nul
 
 REM Open browser with modern web client
 start http://localhost:8081/index.html
