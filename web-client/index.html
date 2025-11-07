@@ -1817,11 +1817,14 @@
                 
                 select.innerHTML = '';
                 
-                // 优先级模型列表（按顺序尝试）
+                // 优先级模型列表（按顺序尝试，兼容 ollama 格式）
                 const preferredModels = [
-                    'Qwen/Qwen2.5-Coder-32B-Instruct',  // 千问3 8B
-                    'qwen',  // 其他千问模型
-                    'Qwen'
+                    'ollama:qwen3:8b',         // Ollama 千问3 8B
+                    'qwen3:8b',                // 千问3 8B
+                    'qwen3',                   // 任何千问3模型
+                    'ollama:qwen',             // Ollama 千问系列
+                    'qwen',                    // 任何千问模型
+                    'Qwen2.5-Coder-32B'        // 千问编码器
                 ];
                 
                 let defaultModel = null;
@@ -1834,12 +1837,14 @@
                         );
                         if (found) {
                             defaultModel = found.id;
+                            console.log(`✅ 自动选择模型: ${defaultModel} (匹配: ${preferred})`);
                             break;
                         }
                     }
                     // 如果没找到首选模型，使用第一个
                     if (!defaultModel && models.length > 0) {
                         defaultModel = models[0].id;
+                        console.log(`ℹ️ 使用第一个模型: ${defaultModel}`);
                     }
                 }
                 

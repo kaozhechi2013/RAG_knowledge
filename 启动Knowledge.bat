@@ -18,6 +18,42 @@ for /f "tokens=2 delims=:" %%a in ('ipconfig ^| findstr /c:"IPv4"') do (
 :found
 set "ip=%ip:~1%"
 
+echo ========================================
+echo   [1/2] Starting Knowledge Desktop App...
+echo ========================================
+echo.
+echo [INFO] Starting API Server and Electron...
+echo [INFO] Please wait for API initialization...
+echo.
+
+REM Start main application (includes API server on port 8080)
+start "Knowledge Desktop" cmd /c "yarn dev"
+
+REM Wait for API server to be ready (check every 2 seconds, max 30 seconds)
+echo.
+echo [INFO] Waiting for API Server to be ready...
+set /a counter=0
+:wait_api
+timeout /t 2 /nobreak >nul
+curl -s http://localhost:8080 >nul 2>&1
+if %errorlevel% equ 0 (
+    echo [SUCCESS] API Server is ready!
+    goto :api_ready
+)
+set /a counter+=1
+if %counter% lss 15 (
+    echo [INFO] Still waiting... (%counter%/15^)
+    goto :wait_api
+)
+echo [WARN] API Server timeout, but continuing...
+
+:api_ready
+echo.
+echo ========================================
+echo   [2/2] Starting Modern Web Client (port 8081)...
+echo ========================================
+echo.
+
 REM Clean port 8081 if occupied
 netstat -ano | findstr ":8081" >nul
 if %errorlevel% equ 0 (
@@ -27,25 +63,21 @@ if %errorlevel% equ 0 (
 )
 
 REM Check Python availability
-echo [1/2] Starting Modern Web Client (port 8081)...
 python --version >nul 2>&1
 if %errorlevel% equ 0 (
     echo [INFO] Using Python http.server
     start "Knowledge Web Server" /MIN cmd /c "cd /d "%~dp0\web-client" && python -m http.server 8081 --bind 0.0.0.0 || pause"
 ) else (
-    echo [WARN] Python not found, trying npx http-server...
+    echo [WARN] Python not found, using Node.js http-server...
     start "Knowledge Web Server" /MIN cmd /c "cd /d "%~dp0\web-client" && npx http-server -p 8081 -a 0.0.0.0 || pause"
 )
 
-REM Wait 3 seconds for Web server to start
-timeout /t 3 /nobreak >nul
-
-REM Open browser with modern web client
-start http://localhost:8081/index.html
+REM Wait 2 seconds for Web server to start
+timeout /t 2 /nobreak >nul
 
 echo.
 echo ========================================
-echo   Access URLs
+echo   All Services Started!
 echo ========================================
 echo.
 echo Modern Web Client:
@@ -53,17 +85,18 @@ echo   Local:  http://localhost:8081/index.html
 echo   LAN:    http://%ip%:8081/index.html
 echo.
 echo Desktop App:
-echo   Knowledge Electron will open automatically
+echo   Knowledge Electron is running
 echo.
-echo API Server (auto-started by desktop app):
+echo API Server:
 echo   Local:  http://localhost:8080
 echo   LAN:    http://%ip%:8080
 echo.
 echo ========================================
-echo   [2/2] Starting Knowledge Desktop App...
-echo ========================================
-echo.
 
-REM Start main application (includes API server on port 8080)
-yarn dev
+REM Open browser with modern web client
+start http://localhost:8081/index.html
+
+echo.
+echo Press any key to stop all services...
+pause >nul
 

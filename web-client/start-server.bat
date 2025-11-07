@@ -6,7 +6,7 @@ echo ================================================
 echo   Knowledge Web Client Server
 echo ================================================
 echo.
-echo [INFO] Starting Python HTTP Server...
+echo [INFO] Starting HTTP Server...
 echo [INFO] Port: 8081
 echo [INFO] Binding to 0.0.0.0 (LAN access enabled)
 echo.
@@ -26,4 +26,12 @@ echo Press Ctrl+C to stop server
 echo ================================================
 echo.
 
-python -m http.server 8081 --bind 0.0.0.0
+REM Try Python first, fallback to Node.js
+python --version >nul 2>&1
+if %errorlevel% equ 0 (
+    echo [INFO] Using Python http.server
+    python -m http.server 8081 --bind 0.0.0.0
+) else (
+    echo [INFO] Python not found, using Node.js http-server
+    npx http-server -p 8081 -a 0.0.0.0
+)
