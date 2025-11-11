@@ -1,3 +1,4 @@
+import KnowledgeService from "@main/services/KnowledgeService";
 import { loggerService } from "@main/services/LoggerService";
 import { reduxService } from "@main/services/ReduxService";
 import { type Request, type Response, Router } from "express";
@@ -193,6 +194,135 @@ router.get("/:id", async (req: Request, res: Response) => {
 		return res.status(500).json({
 			error: {
 				message: "Failed to fetch knowledge base details",
+				details: (error as Error).message,
+			},
+		});
+	}
+});
+
+/**
+ * @swagger
+ * /v1/knowledge:
+ *   post:
+ *     summary: Create a new knowledge base
+ *     description: Create a new knowledge base with specified configuration
+ *     tags: [Knowledge]
+ *     security:
+ *       - ApiKeyAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - model
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 description: Knowledge base name
+ *               description:
+ *                 type: string
+ *                 description: Knowledge base description
+ *               model:
+ *                 type: object
+ *                 description: Embedding model configuration
+ *                 required:
+ *                   - id
+ *                 properties:
+ *                   id:
+ *                     type: string
+ *                   name:
+ *                     type: string
+ *                   provider:
+ *                     type: string
+ *               rerankModel:
+ *                 type: object
+ *                 description: Rerank model configuration
+ *                 properties:
+ *                   id:
+ *                     type: string
+ *                   name:
+ *                     type: string
+ *                   provider:
+ *                     type: string
+ *     responses:
+ *       200:
+ *         description: Knowledge base created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     name:
+ *                       type: string
+ *       400:
+ *         description: Invalid request parameters
+ *       500:
+ *         description: Internal server error
+ */
+router.post("/", async (req: Request, res: Response) => {
+	try {
+		const { name, description, model, rerankModel } = req.body;
+
+		if (!name || !model) {
+			return res.status(400).json({
+				error: {
+					message: "Missing required fields: name and model are required",
+				},
+			});
+		}
+
+		logger.info("创建知识库请求:", {
+			name,
+			model: model.id,
+			rerankModel: rerankModel?.id,
+		});
+
+		// Create knowledge base params
+		const baseParams = {
+			id: `kb_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+			name,
+			description: description || "",
+			model,
+			rerankModel: rerankModel || null,
+			embedApiClient: model,
+			rerankApiClient: rerankModel || null,
+			dimensions: model.dimensions || 1024,
+			documentCount: 30,
+			created_at: Date.now(),
+			updated_at: Date.now(),
+			items: [],
+		};
+
+		// Call KnowledgeService to initialize RAG application
+		await KnowledgeService.create(null as any, baseParams);
+
+		logger.info("知识库创建成功:", {
+			id: baseParams.id,
+			name: baseParams.name,
+		});
+
+		return res.json({
+			data: {
+				id: baseParams.id,
+				name: baseParams.name,
+				model: baseParams.model,
+				rerankModel: baseParams.rerankModel,
+				created_at: baseParams.created_at,
+			},
+		});
+	} catch (error) {
+		logger.error("创建知识库失败:", error as Error);
+		return res.status(500).json({
+			error: {
+				message: "Failed to create knowledge base",
 				details: (error as Error).message,
 			},
 		});
