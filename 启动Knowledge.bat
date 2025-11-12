@@ -1,5 +1,4 @@
 @echo off
-chcp 65001 >nul
 cd /d "%~dp0"
 
 cls
@@ -7,6 +6,31 @@ echo ========================================
 echo   Knowledge AI System
 echo ========================================
 echo.
+
+REM Check Node.js version
+node --version >nul 2>&1
+if %errorlevel% neq 0 (
+    echo [ERROR] Node.js not found!
+    echo Please install Node.js v22+ from: https://nodejs.org
+    echo.
+    pause
+    exit /b 1
+)
+
+REM Check if node_modules exists
+if not exist "node_modules\" (
+    echo [WARN] Dependencies not installed!
+    echo Running: yarn install
+    echo.
+    call yarn install
+    if %errorlevel% neq 0 (
+        echo [ERROR] Failed to install dependencies
+        pause
+        exit /b 1
+    )
+    echo.
+)
+
 echo Starting all services...
 echo.
 
@@ -35,7 +59,7 @@ echo.
 echo [INFO] Waiting for API Server to be ready...
 set /a counter=0
 :wait_api
-timeout /t 2 /nobreak >nul
+waitfor /t 2 SignalThatWillNeverCome >nul 2>&1
 curl -s http://localhost:8080 >nul 2>&1
 if %errorlevel% equ 0 (
     echo [SUCCESS] API Server is ready!
@@ -46,7 +70,16 @@ if %counter% lss 15 (
     echo [INFO] Still waiting... (%counter%/15^)
     goto :wait_api
 )
-echo [WARN] API Server timeout, but continuing...
+echo.
+echo [ERROR] API Server failed to start!
+echo.
+echo Possible causes:
+echo   1. Electron needs a graphical environment (use RDP on server)
+echo   2. Node.js version too old (check: node --version)
+echo   3. Port 8080 already in use (check: netstat -ano ^| findstr ":8080")
+echo.
+echo Continuing anyway (Web Client only mode)...
+waitfor /t 2 SignalThatWillNeverCome >nul 2>&1
 
 :api_ready
 echo.
@@ -60,7 +93,7 @@ netstat -ano | findstr ":8081" >nul
 if %errorlevel% equ 0 (
     echo Cleaning port 8081...
     for /f "tokens=5" %%p in ('netstat -ano ^| findstr ":8081"') do taskkill /F /PID %%p >nul 2>&1
-    timeout /t 1 /nobreak >nul
+    waitfor /t 1 SignalThatWillNeverCome >nul 2>&1
 )
 
 REM Check Python availability
@@ -74,7 +107,7 @@ if %errorlevel% equ 0 (
 )
 
 REM Wait 2 seconds for Web server to start
-timeout /t 2 /nobreak >nul
+waitfor /t 2 SignalThatWillNeverCome >nul 2>&1
 
 echo.
 echo ========================================
@@ -110,5 +143,5 @@ taskkill /F /IM node.exe /FI "WINDOWTITLE eq npx http-server*" >nul 2>&1
 for /f "tokens=5" %%p in ('netstat -ano ^| findstr ":8080"') do taskkill /F /PID %%p >nul 2>&1
 for /f "tokens=5" %%p in ('netstat -ano ^| findstr ":8081"') do taskkill /F /PID %%p >nul 2>&1
 echo All services stopped.
-timeout /t 2 /nobreak >nul
+waitfor /t 2 SignalThatWillNeverCome >nul 2>&1
 
