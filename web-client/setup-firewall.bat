@@ -17,6 +17,7 @@ echo.
 echo [1/4] Removing old rules...
 netsh advfirewall firewall delete rule name="Knowledge Web Client (8081)" >nul 2>&1
 netsh advfirewall firewall delete rule name="Knowledge API Server (8080)" >nul 2>&1
+netsh advfirewall firewall delete rule name="Knowledge API Server (23333)" >nul 2>&1
 echo Done
 
 echo.
@@ -29,8 +30,8 @@ if %errorLevel% equ 0 (
 )
 
 echo.
-echo [3/4] Adding rule: API Server (port 8080)...
-netsh advfirewall firewall add rule name="Knowledge API Server (8080)" dir=in action=allow protocol=TCP localport=8080
+echo [3/4] Adding rule: API Server (port 23333)...
+netsh advfirewall firewall add rule name="Knowledge API Server (23333)" dir=in action=allow protocol=TCP localport=23333
 if %errorLevel% equ 0 (
     echo Done
 ) else (
@@ -40,7 +41,7 @@ if %errorLevel% equ 0 (
 echo.
 echo [4/4] Verifying rules...
 netsh advfirewall firewall show rule name="Knowledge Web Client (8081)"
-netsh advfirewall firewall show rule name="Knowledge API Server (8080)"
+netsh advfirewall firewall show rule name="Knowledge API Server (23333)"
 
 echo.
 echo ========================================
@@ -49,6 +50,6 @@ echo ========================================
 echo.
 echo Now colleagues can access via LAN
 echo   - Web UI: http://YOUR_IP:8081
-echo   - API Service: http://YOUR_IP:8080
+echo   - API Service: http://YOUR_IP:23333
 echo.
 pause

@@ -64,11 +64,11 @@ if %errorLevel% equ 0 (
     echo      Run setup-firewall.bat as administrator
 )
 
-netsh advfirewall firewall show rule name="Knowledge API Server (8080)" >nul 2>&1
+netsh advfirewall firewall show rule name="Knowledge API Server (23333)" >nul 2>&1
 if %errorLevel% equ 0 (
-    echo   [OK] Port 8080: Configured
+    echo   [OK] Port 23333: Configured
 ) else (
-    echo   [FAIL] Port 8080: Not configured
+    echo   [FAIL] Port 23333: Not configured
     echo      Run setup-firewall.bat as administrator
 )
 

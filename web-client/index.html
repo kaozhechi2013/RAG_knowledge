@@ -1076,8 +1076,12 @@
             <div class="modal-body">
                 <div class="form-group">
                     <label class="form-label">API 地址</label>
-                    <input type="text" class="form-input" id="apiUrlInput" placeholder="http://localhost:8080">
-                    <div class="form-hint">本机使用 localhost，局域网访问使用服务器IP</div>
+                    <input type="text" class="form-input" id="apiUrlInput" placeholder="http://localhost:23333">
+                    <div class="form-hint">
+                        <div>💡 <strong>推荐配置：</strong>使用启动脚本显示的局域网地址</div>
+                        <div style="margin-top: 4px;">例如: <code>http://10.216.186.24:23333</code></div>
+                        <div style="margin-top: 4px; color: #94a3b8;">本机测试可用 localhost，但可能影响知识库功能</div>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label class="form-label">选择模型</label>
@@ -1085,6 +1089,16 @@
                         <option value="">加载中...</option>
                     </select>
                     <button class="btn-secondary" style="margin-top: 8px;" onclick="refreshModels()">🔄 刷新模型列表</button>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">知识库</label>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <select class="form-select" id="knowledgeBaseSelectInSettings" disabled style="flex: 1;">
+                            <option value="">查看主界面</option>
+                        </select>
+                        <button class="btn-secondary" onclick="refreshKnowledgeBases()">🔄 刷新知识库</button>
+                    </div>
+                    <div class="form-hint">在主界面左下角选择知识库进行对话</div>
                 </div>
                 <div class="btn-group">
                     <button class="btn-primary" onclick="saveSettings()">保存设置</button>
@@ -1109,6 +1123,9 @@
 
         // 初始化
         async function init() {
+            // 检查是否通过 localhost 访问，显示提示
+            checkAccessMethod();
+            
             loadConfig();
             loadSessions();
             await fetchApiKey(); // 先获取API Key
@@ -1117,9 +1134,16 @@
             await new Promise(resolve => setTimeout(resolve, 100));
             
             // 然后再进行需要API Key的操作
+            console.log('🚀 开始初始化服务...');
             updateStatus();
-            refreshModels();
-            refreshKnowledgeBases();
+            
+            // 并行刷新模型和知识库
+            await Promise.all([
+                refreshModels(),
+                refreshKnowledgeBases()
+            ]);
+            
+            console.log('✅ 初始化完成');
             
             if (sessions.length === 0) {
                 createNewSession();
@@ -1127,29 +1151,64 @@
                 switchSession(sessions[0].id);
             }
         }
+        
+        // 检查访问方式并显示提示
+        function checkAccessMethod() {
+            const hostname = window.location.hostname;
+            if (hostname === 'localhost' || hostname === '127.0.0.1') {
+                console.warn('⚠️ 您正在通过 localhost 访问 Web 客户端');
+                console.warn('⚠️ 建议使用启动脚本显示的局域网地址访问，以获得最佳体验');
+                console.warn('⚠️ 例如: http://10.216.186.24:8081');
+                
+                // 在控制台显示明显的提示
+                console.log('%c💡 使用提示', 'background: #fbbf24; color: #000; padding: 8px; font-size: 14px; font-weight: bold;');
+                console.log('%c如果知识库刷新失败，请尝试:', 'font-size: 12px; color: #64748b;');
+                console.log('%c1. 使用启动脚本显示的 IP 地址访问（推荐）', 'font-size: 12px; color: #0f172a;');
+                console.log('%c2. 在设置中手动填写 API 服务器 IP 地址', 'font-size: 12px; color: #0f172a;');
+            }
+        }
 
-        // 智能API地址检测 - 自动适配任何部署环境
+        // 智能API地址检测 - 优先使用局域网IP
         function getDefaultApiUrl() {
             const hostname = window.location.hostname;
             const protocol = window.location.protocol;
             
+            // 如果通过 localhost 或 127.0.0.1 访问，尝试获取服务器的真实IP
+            if (hostname === 'localhost' || hostname === '127.0.0.1') {
+                // 提示用户应该使用服务器IP访问
+                console.warn('⚠️ 检测到通过 localhost 访问，建议使用服务器 IP 地址访问以获得最佳体验');
+                console.warn('⚠️ 启动脚本会显示正确的访问地址，格式如: http://10.216.186.24:8081');
+            }
+            
             // 自动使用当前访问的主机地址
             // 无论是localhost、局域网IP还是域名都能自动适配
-            return `${protocol}//${hostname}:8080`;
+            return `${protocol}//${hostname}:23333`;
         }
 
         // 加载配置
         function loadConfig() {
-            // 如果没有保存过配置，使用智能检测的地址
             const savedApiUrl = localStorage.getItem('apiUrl');
+            const currentHostname = window.location.hostname;
             const defaultUrl = getDefaultApiUrl();
             
-            // 优先使用保存的地址，但如果主机名变了，自动更新
-            if (!savedApiUrl || savedApiUrl.includes('localhost') !== defaultUrl.includes('localhost')) {
+            // 智能地址管理逻辑：
+            // 1. 如果首次使用（无保存地址），使用检测到的地址
+            // 2. 如果保存的地址是 localhost，但当前通过IP访问，更新为IP地址
+            // 3. 如果保存的地址是 IP，但当前通过localhost访问，保持IP地址（不降级）
+            if (!savedApiUrl) {
+                // 首次使用
                 config.apiUrl = defaultUrl;
                 localStorage.setItem('apiUrl', defaultUrl);
+                console.log('🎯 首次启动，API地址设为:', config.apiUrl);
+            } else if (savedApiUrl.includes('localhost') && !currentHostname.includes('localhost') && currentHostname !== '127.0.0.1') {
+                // 之前用 localhost，现在用 IP 访问，升级为 IP
+                config.apiUrl = defaultUrl;
+                localStorage.setItem('apiUrl', defaultUrl);
+                console.log('🔄 从 localhost 升级到 IP 地址:', config.apiUrl);
             } else {
+                // 使用保存的地址
                 config.apiUrl = savedApiUrl;
+                console.log('✅ 使用已保存的 API 地址:', config.apiUrl);
             }
             
             // 默认使用千问3 8B模型
@@ -1540,21 +1599,49 @@
 
         // ========== 知识库管理 ==========
         async function refreshKnowledgeBases() {
+            console.log('🔄 开始刷新知识库...');
             const select = document.getElementById('knowledgeBaseSelect');
             select.innerHTML = '<option value="">加载中...</option>';
             
+            // 确保 API Key 已设置
+            if (!config.apiKey) {
+                console.warn('⚠️ API Key 未设置，等待初始化...');
+                await fetchApiKey();
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+            
             try {
-                const response = await fetch(`${config.apiUrl}/v1/knowledge`, {
-                    headers: { 'Authorization': `Bearer ${config.apiKey}` }
+                // 检查配置
+                console.log('📡 API URL:', config.apiUrl);
+                console.log('🔑 API Key:', config.apiKey ? '已设置' : '未设置');
+                
+                const url = `${config.apiUrl}/v1/knowledge`;
+                console.log('📍 请求地址:', url);
+                
+                const response = await fetch(url, {
+                    headers: { 
+                        'Authorization': `Bearer ${config.apiKey}`,
+                        'Content-Type': 'application/json'
+                    }
                 });
                 
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                console.log('📥 响应状态:', response.status);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('❌ 错误响应:', errorText);
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
                 
                 const result = await response.json();
+                console.log('📦 知识库数据:', result);
+                
                 const kbs = result.data || [];
+                console.log(`✅ 成功加载 ${kbs.length} 个知识库`);
                 
                 select.innerHTML = '<option value="">💬 普通对话</option>';
                 kbs.forEach(kb => {
+                    console.log(`  - ${kb.name} (${kb.documentCount || 0}个文档)`);
                     const option = document.createElement('option');
                     option.value = kb.id;
                     option.textContent = `📚 ${kb.name} (${kb.documentCount || 0}个文档)`;
@@ -1562,25 +1649,46 @@
                     select.appendChild(option);
                 });
                 
+                console.log(`📋 下拉框已更新，共 ${select.options.length} 个选项`);
+                
                 // 恢复选择并触发显示文档列表
                 if (config.knowledgeBases && config.knowledgeBases.length > 0) {
-                    select.value = config.knowledgeBases[0].id;
+                    const savedKbId = config.knowledgeBases[0].id;
+                    console.log(`🔄 尝试恢复之前选择的知识库: ${savedKbId}`);
+                    select.value = savedKbId;
+                    
                     // 手动触发显示文档列表
                     const selectedOption = select.options[select.selectedIndex];
-                    if (selectedOption.dataset.kb) {
+                    if (selectedOption && selectedOption.value && selectedOption.dataset && selectedOption.dataset.kb) {
                         try {
                             const kb = JSON.parse(selectedOption.dataset.kb);
+                            console.log(`✅ 恢复知识库选择: ${kb.name}`);
                             showDocumentList(kb);
                         } catch (e) {
-                            console.error('解析知识库数据失败:', e);
+                            console.error('❌ 解析知识库数据失败:', e);
                         }
+                    } else {
+                        console.warn('⚠️ 未找到之前选择的知识库，已重置');
+                        hideDocumentList();
                     }
                 } else {
+                    console.log('ℹ️ 无之前保存的知识库选择');
                     hideDocumentList();
                 }
             } catch (error) {
-                console.error('加载知识库失败:', error);
-                select.innerHTML = '<option value="">❌ 加载失败</option>';
+                console.error('❌ 加载知识库失败:', error);
+                console.error('错误详情:', error.message);
+                
+                // 如果是网络错误，提供更友好的提示
+                if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+                    select.innerHTML = '<option value="">⚠️ 无法连接到服务器</option>';
+                    console.error('💡 请检查:');
+                    console.error('  1. API 服务器是否已启动（在桌面应用设置中启用）');
+                    console.error('  2. API 地址是否正确:', config.apiUrl);
+                    console.error('  3. 防火墙是否允许访问端口 23333');
+                } else {
+                    select.innerHTML = '<option value="">❌ 加载失败</option>';
+                }
                 hideDocumentList();
             }
         }
@@ -1589,12 +1697,18 @@
             const select = document.getElementById('knowledgeBaseSelect');
             const selectedOption = select.options[select.selectedIndex];
             
-            if (selectedOption.dataset.kb) {
+            console.log('📝 知识库选择改变:', {
+                selectedIndex: select.selectedIndex,
+                value: select.value,
+                hasDataset: selectedOption && !!selectedOption.dataset
+            });
+            
+            if (selectedOption && selectedOption.dataset && selectedOption.dataset.kb) {
                 try {
                     const kb = JSON.parse(selectedOption.dataset.kb);
                     // 保存完整的知识库数据（包含items）
                     config.knowledgeBases = [kb];
-                    console.log('📚 Selected knowledge base:', {
+                    console.log('📚 已选择知识库:', {
                         id: kb.id,
                         name: kb.name,
                         itemCount: kb.items?.length || 0
@@ -1602,10 +1716,12 @@
                     // 显示文档列表
                     showDocumentList(kb);
                 } catch (e) {
+                    console.error('❌ 解析知识库数据失败:', e);
                     config.knowledgeBases = [];
                     hideDocumentList();
                 }
             } else {
+                console.log('ℹ️ 切换到普通对话模式');
                 config.knowledgeBases = [];
                 hideDocumentList();
             }
@@ -1752,9 +1868,21 @@
             renderMessages();
         }
 
-        function openSettings() {
+        async function openSettings() {
+            console.log('⚙️ 打开设置对话框');
+            
+            // 填充当前配置到输入框
+            document.getElementById('apiUrlInput').value = config.apiUrl || getDefaultApiUrl();
+            
             document.getElementById('settingsModal').classList.add('show');
-            refreshModels();
+            
+            // 并行刷新模型和知识库
+            console.log('🔄 开始刷新模型和知识库...');
+            await Promise.all([
+                refreshModels(),
+                refreshKnowledgeBases()
+            ]);
+            console.log('✅ 刷新完成');
         }
 
         function closeSettings() {
@@ -1800,15 +1928,34 @@
             const select = document.getElementById('modelSelect');
             select.innerHTML = '<option value="">加载中...</option>';
             
+            // 确保 API Key 已设置
+            if (!config.apiKey) {
+                console.warn('⚠️ API Key 未设置，等待初始化...');
+                await fetchApiKey();
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+            
             try {
+                console.log('🔄 刷新模型列表...');
+                console.log('📡 API URL:', config.apiUrl);
+                
                 const response = await fetch(`${config.apiUrl}/v1/models`, {
-                    headers: { 'Authorization': `Bearer ${config.apiKey}` }
+                    headers: { 
+                        'Authorization': `Bearer ${config.apiKey}`,
+                        'Content-Type': 'application/json'
+                    }
                 });
                 
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('❌ 获取模型失败:', errorText);
+                    throw new Error(`HTTP ${response.status}`);
+                }
                 
                 const data = await response.json();
                 const models = data.data || [];
+                
+                console.log(`✅ 获取到 ${models.length} 个模型`);
                 
                 if (models.length === 0) {
                     select.innerHTML = '<option value="">未找到模型</option>';
