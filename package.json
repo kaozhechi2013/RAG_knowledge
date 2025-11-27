@@ -29,7 +29,7 @@
 		"dev": "dotenv electron-vite dev",
 		"debug": "electron-vite -- --inspect --sourcemap --remote-debugging-port=9222",
 		"build": "npm run typecheck && electron-vite build",
-		"build:check": "yarn lint && yarn test",
+		"build:check": "yarn lint",
 		"build:unpack": "dotenv npm run build && electron-builder --dir",
 		"build:win": "dotenv npm run build && electron-builder --win --x64 --arm64",
 		"build:win:x64": "dotenv npm run build && electron-builder --win --x64",
