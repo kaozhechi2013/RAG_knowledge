@@ -2818,6 +2818,89 @@ const migrateConfig = {
 			return state;
 		}
 	},
+	164: (state: any) => {
+		try {
+			logger.info("migrate 164: Update to use local Qwen3 service");
+
+			// 本地 Qwen3 模型配置
+			const localQwen3Model = {
+				id: "Qwen3-30B-A3B-Instruct-2507-AWQ",
+				name: "Qwen3-30B-A3B-Instruct-2507-AWQ",
+				provider: "cherryin",
+				group: "Qwen",
+			};
+
+			// 更新 cherryin provider 配置为本地服务
+			const cherryinProvider = state.llm?.providers?.find(
+				(p: any) => p.id === "cherryin",
+			);
+			if (cherryinProvider) {
+				cherryinProvider.name = "本地 Qwen3 服务";
+				cherryinProvider.apiHost = "http://10.216.8.123:8015";
+				cherryinProvider.apiKey =
+					"sk-pyQKSv0m50NhK77R2a89832eAb914eF4B8D85882C2D06c5d";
+				cherryinProvider.models = [localQwen3Model];
+				cherryinProvider.enabled = true;
+				logger.info("✅ Updated cherryin provider to local Qwen3 service");
+			}
+
+			// 更新 LLM 默认模型
+			if (state.llm?.defaultModel) {
+				state.llm.defaultModel = localQwen3Model;
+				logger.info("✅ Updated defaultModel to Qwen3");
+			}
+			if (state.llm?.topicNamingModel) {
+				state.llm.topicNamingModel = localQwen3Model;
+				logger.info("✅ Updated topicNamingModel to Qwen3");
+			}
+			if (state.llm?.quickModel) {
+				state.llm.quickModel = localQwen3Model;
+				logger.info("✅ Updated quickModel to Qwen3");
+			}
+			if (state.llm?.translateModel) {
+				state.llm.translateModel = localQwen3Model;
+				logger.info("✅ Updated translateModel to Qwen3");
+			}
+
+			// 更新助手默认模型
+			if (state.assistants?.defaultAssistant?.model) {
+				state.assistants.defaultAssistant.model = localQwen3Model;
+				logger.info("✅ Updated default assistant model to Qwen3");
+			}
+
+			// 更新所有使用 Cherry AI 模型的助手
+			let updatedCount = 0;
+			state.assistants?.items?.forEach((assistant: any) => {
+				if (assistant.model?.provider === "cherryai") {
+					assistant.model = localQwen3Model;
+					updatedCount++;
+				}
+			});
+			if (updatedCount > 0) {
+				logger.info(`✅ Updated ${updatedCount} assistants to use Qwen3`);
+			}
+
+			// 禁用 Cherry AI provider
+			const cherryaiProvider = state.llm?.providers?.find(
+				(p: any) => p.id === "cherryai",
+			);
+			if (cherryaiProvider) {
+				cherryaiProvider.enabled = false;
+				logger.info("✅ Disabled cherryai provider");
+			}
+
+			return state;
+		} catch (error) {
+			logger.error("❌ migrate 164 error", error as Error);
+			return state;
+		}
+	},
+	165: (state: any) => {
+		// 这是一个强制触发 164 迁移的版本
+		// 因为某些用户的数据库可能已经标记为 164，但实际上没有执行迁移
+		logger.info("migrate 165: Force trigger 164 migration");
+		return migrateConfig[164](state);
+	},
 };
 
 // 注意：添加新迁移时，记得同时更新 persistReducer

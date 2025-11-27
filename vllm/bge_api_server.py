@@ -35,6 +35,19 @@ class RerankRequest(BaseModel):
     documents: List[str]
     top_k: Optional[int] = None
 
+# OpenAI 兼容格式
+class OpenAIEmbedRequest(BaseModel):
+    input: List[str] | str  # 可以是单个字符串或字符串列表
+    model: str = "bge-m3"
+    encoding_format: Optional[str] = "float"
+    dimensions: Optional[int] = None  # BGE-M3 固定 1024 维
+
+class OpenAIRerankRequest(BaseModel):
+    query: str
+    documents: List[str]
+    model: str = "bge-reranker-v2-m3"
+    top_n: Optional[int] = None  # 返回前 N 个结果
+
 @app.on_event("startup")
 async def load_models():
     """启动时加载模型到 GPU"""
@@ -129,6 +142,86 @@ async def embed_texts(request: EmbedRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/v1/embeddings")
+async def openai_embeddings(request: OpenAIEmbedRequest):
+    """
+    OpenAI 兼容的嵌入接口
+    
+    请求格式:
+    {
+        "input": ["text1", "text2"] or "single text",
+        "model": "bge-m3",
+        "encoding_format": "float"
+    }
+    
+    返回格式:
+    {
+        "object": "list",
+        "data": [
+            {
+                "object": "embedding",
+                "embedding": [0.1, 0.2, ...],
+                "index": 0
+            }
+        ],
+        "model": "bge-m3",
+        "usage": {
+            "prompt_tokens": 10,
+            "total_tokens": 10
+        }
+    }
+    """
+    try:
+        # 标准化输入为列表
+        texts = [request.input] if isinstance(request.input, str) else request.input
+        
+        # 编码
+        encoded = m3_tokenizer(
+            texts,
+            padding=True,
+            truncation=True,
+            return_tensors='pt',
+            max_length=512
+        )
+        
+        if torch.cuda.is_available():
+            encoded = {k: v.cuda() for k, v in encoded.items()}
+        
+        # 生成嵌入
+        with torch.no_grad():
+            outputs = m3_model(**encoded)
+            embeddings = outputs.last_hidden_state[:, 0]  # CLS token
+            
+            # 归一化
+            embeddings = torch.nn.functional.normalize(embeddings, p=2, dim=1)
+            embeddings = embeddings.cpu().numpy()
+        
+        # 构建 OpenAI 格式的响应
+        data = [
+            {
+                "object": "embedding",
+                "embedding": emb.tolist(),
+                "index": idx
+            }
+            for idx, emb in enumerate(embeddings)
+        ]
+        
+        # 计算 token 数量(粗略估计)
+        total_tokens = sum(len(text.split()) for text in texts)
+        
+        return {
+            "object": "list",
+            "data": data,
+            "model": request.model,
+            "usage": {
+                "prompt_tokens": total_tokens,
+                "total_tokens": total_tokens
+            }
+        }
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.post("/rerank")
 async def rerank_documents(request: RerankRequest):
     """
@@ -182,6 +275,87 @@ async def rerank_documents(request: RerankRequest):
             "query": request.query,
             "results": results,
             "total": len(request.documents)
+        }
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/v1/rerank")
+async def openai_rerank(request: OpenAIRerankRequest):
+    """
+    OpenAI 兼容的重排序接口
+    
+    请求格式:
+    {
+        "query": "查询文本",
+        "documents": ["文档1", "文档2", ...],
+        "model": "bge-reranker-v2-m3",
+        "top_n": 5
+    }
+    
+    返回格式:
+    {
+        "object": "list",
+        "data": [
+            {
+                "index": 0,
+                "relevance_score": 0.95
+            }
+        ],
+        "model": "bge-reranker-v2-m3",
+        "usage": {
+            "prompt_tokens": 10,
+            "total_tokens": 100
+        }
+    }
+    """
+    try:
+        # 构建查询-文档对
+        pairs = [[request.query, doc] for doc in request.documents]
+        
+        # 编码
+        inputs = reranker_tokenizer(
+            pairs,
+            padding=True,
+            truncation=True,
+            return_tensors='pt',
+            max_length=512
+        )
+        
+        if torch.cuda.is_available():
+            inputs = {k: v.cuda() for k, v in inputs.items()}
+        
+        # 计算得分
+        with torch.no_grad():
+            scores = reranker_model(**inputs, return_dict=True).logits.view(-1,).float()
+            scores = scores.cpu().numpy()
+        
+        # 排序
+        sorted_indices = np.argsort(scores)[::-1]
+        
+        # 构建 OpenAI 格式的结果
+        top_n = request.top_n or len(request.documents)
+        data = [
+            {
+                "index": int(idx),
+                "relevance_score": float(scores[idx])
+            }
+            for idx in sorted_indices[:top_n]
+        ]
+        
+        # 计算 token 数量(粗略估计)
+        prompt_tokens = len(request.query.split())
+        total_tokens = prompt_tokens + sum(len(doc.split()) for doc in request.documents)
+        
+        return {
+            "object": "list",
+            "data": data,
+            "results": data,  # 兼容 DefaultStrategy.extractResults(data)
+            "model": request.model,
+            "usage": {
+                "prompt_tokens": prompt_tokens,
+                "total_tokens": total_tokens
+            }
         }
     
     except Exception as e:
