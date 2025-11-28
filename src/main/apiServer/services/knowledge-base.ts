@@ -86,11 +86,18 @@ export class KnowledgeBaseService {
 
 			// Ensure baseURL has /v1 suffix for OpenAI-compatible APIs
 			let baseURL = provider.apiHost || "";
-			if (baseURL && !baseURL.endsWith("/v1") && !baseURL.includes("/v1/")) {
+			// Remove trailing slash to avoid double slashes
+			baseURL = baseURL.replace(/\/+$/, "");
+			
+			// Add /v1 if not already present
+			if (baseURL && !baseURL.endsWith("/v1")) {
 				baseURL = `${baseURL}/v1`;
 			}
 
-			logger.info(`Using baseURL for embedding:`, { baseURL });
+			logger.info(`Using baseURL for embedding:`, { 
+				original: provider.apiHost,
+				processed: baseURL 
+			});
 
 			return {
 				model: modelId, // Use extracted modelId (without provider prefix)
