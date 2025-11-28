@@ -1121,6 +1121,69 @@
         let sessions = [];
         let currentSessionId = null;
 
+        // ========== API URL 规范化工具函数 ==========
+        /**
+         * 构建 OpenAI 兼容的 API 端点
+         * 自动处理 /v1 前缀，支持各种服务器配置
+         * @param {string} baseUrl - API 基础 URL (如 http://10.216.8.123:8015)
+         * @param {string} endpoint - API 端点 (如 'chat/completions' 或 '/chat/completions')
+         * @returns {string} 完整的 API URL
+         */
+        function buildApiUrl(baseUrl, endpoint) {
+            // 移除 baseUrl 末尾的斜杠
+            baseUrl = baseUrl.replace(/\/+$/, '');
+            
+            // 移除 endpoint 开头的斜杠
+            endpoint = endpoint.replace(/^\/+/, '');
+            
+            // 检查 baseUrl 是否已包含 /v1
+            const hasV1 = baseUrl.endsWith('/v1');
+            
+            // 如果 baseUrl 已经包含 /v1，直接拼接
+            if (hasV1) {
+                return `${baseUrl}/${endpoint}`;
+            }
+            
+            // 否则，尝试不带 /v1 的路径
+            // 如果失败，再尝试带 /v1 的路径（在 catch 中处理）
+            return `${baseUrl}/${endpoint}`;
+        }
+
+        /**
+         * 智能 API 请求 - 自动尝试不同的 URL 格式
+         * @param {string} baseUrl - API 基础 URL
+         * @param {string} endpoint - API 端点
+         * @param {object} options - fetch 选项
+         * @returns {Promise<Response>}
+         */
+        async function smartFetch(baseUrl, endpoint, options = {}) {
+            // 如果 baseUrl 已经包含 /v1，直接请求
+            if (baseUrl.endsWith('/v1')) {
+                const url = buildApiUrl(baseUrl, endpoint);
+                return fetch(url, options);
+            }
+            
+            // 第一次尝试: 带 /v1 (OpenAI 标准格式)
+            let url = buildApiUrl(baseUrl + '/v1', endpoint);
+            
+            try {
+                const response = await fetch(url, options);
+                // 如果成功或遇到非404错误，直接返回
+                if (response.ok || (response.status >= 400 && response.status !== 404)) {
+                    return response;
+                }
+                // 404 错误，尝试不带 /v1 的版本
+                console.warn(`404 with /v1: ${url}, trying without /v1`);
+            } catch (error) {
+                console.warn(`请求失败 (带 /v1): ${url}`, error.message);
+            }
+            
+            // 第二次尝试: 不带 /v1
+            url = buildApiUrl(baseUrl, endpoint);
+            console.log(`重试请求 (不带 /v1): ${url}`);
+            return fetch(url, options);
+        }
+
         // 初始化
         async function init() {
             // 检查是否通过 localhost 访问，显示提示
@@ -1481,6 +1544,13 @@
             contentDiv.innerHTML = '<div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>';
             
             try {
+                // 🔍 调试：检查 config 状态
+                console.log('🔍 发送消息前的配置状态:', {
+                    hasKnowledgeBases: !!config.knowledgeBases,
+                    knowledgeBasesLength: config.knowledgeBases?.length || 0,
+                    knowledgeBases: config.knowledgeBases
+                });
+                
                 // 构建请求
                 const requestBody = {
                     model: config.model,
@@ -1498,7 +1568,7 @@
                 // 如果使用知识库,实时获取完整数据（包含items信息）
                 if (config.knowledgeBases && config.knowledgeBases.length > 0) {
                     try {
-                        const kbResponse = await fetch(`${config.apiUrl}/v1/knowledge`, {
+                        const kbResponse = await smartFetch(config.apiUrl, 'knowledge', {
                             headers: { 'Authorization': `Bearer ${config.apiKey}` }
                         });
                         if (kbResponse.ok) {
@@ -1508,11 +1578,13 @@
                             requestBody.knowledge_bases = allKbs.filter(kb => 
                                 config.knowledgeBases.some(selected => selected.id === kb.id)
                             );
-                            console.log('📚 Using knowledge bases:', requestBody.knowledge_bases.map(kb => ({
+                            console.log('📚 Using knowledge bases (summary):', requestBody.knowledge_bases.map(kb => ({
                                 id: kb.id,
                                 name: kb.name,
-                                itemCount: kb.items?.length || 0
+                                itemCount: kb.items?.length || 0,
+                                hasItems: !!kb.items
                             })));
+                            console.log('📦 Full knowledge bases data:', requestBody.knowledge_bases);
                         } else {
                             // 降级到使用存储的数据
                             requestBody.knowledge_bases = config.knowledgeBases;
@@ -1523,8 +1595,29 @@
                     }
                 }
                 
+                // 🔍 最终请求体调试
+                console.log('🚀 即将发送的请求体:', {
+                    model: requestBody.model,
+                    messageCount: requestBody.messages.length,
+                    hasKnowledgeBases: !!requestBody.knowledge_bases,
+                    knowledgeBasesCount: requestBody.knowledge_bases?.length || 0,
+                    knowledgeBasesHaveItems: requestBody.knowledge_bases?.every(kb => kb.items && kb.items.length > 0)
+                });
+                
+                // 🔍 输出完整的 knowledge_bases 数据（仅前3个item）
+                if (requestBody.knowledge_bases && requestBody.knowledge_bases.length > 0) {
+                    console.log('📦 完整的 knowledge_bases[0]:', {
+                        id: requestBody.knowledge_bases[0].id,
+                        name: requestBody.knowledge_bases[0].name,
+                        itemsCount: requestBody.knowledge_bases[0].items?.length || 0,
+                        firstItem: requestBody.knowledge_bases[0].items?.[0],
+                        secondItem: requestBody.knowledge_bases[0].items?.[1],
+                        thirdItem: requestBody.knowledge_bases[0].items?.[2]
+                    });
+                }
+                
                 // 发送请求
-                const response = await fetch(`${config.apiUrl}/v1/chat/completions`, {
+                const response = await smartFetch(config.apiUrl, 'chat/completions', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1534,7 +1627,20 @@
                 });
                 
                 if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
+                    // 🔍 捕获错误响应体
+                    let errorDetail = `HTTP ${response.status}`;
+                    try {
+                        const errorBody = await response.text();
+                        console.error('❌ 服务器错误响应:', {
+                            status: response.status,
+                            statusText: response.statusText,
+                            body: errorBody
+                        });
+                        errorDetail += `: ${errorBody.substring(0, 200)}`;
+                    } catch (e) {
+                        console.error('无法读取错误响应体:', e);
+                    }
+                    throw new Error(errorDetail);
                 }
                 
                 // 处理流式响应
@@ -1614,11 +1720,9 @@
                 // 检查配置
                 console.log('📡 API URL:', config.apiUrl);
                 console.log('🔑 API Key:', config.apiKey ? '已设置' : '未设置');
+                console.log('📍 API 基础地址:', config.apiUrl);
                 
-                const url = `${config.apiUrl}/v1/knowledge`;
-                console.log('📍 请求地址:', url);
-                
-                const response = await fetch(url, {
+                const response = await smartFetch(config.apiUrl, 'knowledge', {
                     headers: { 
                         'Authorization': `Bearer ${config.apiKey}`,
                         'Content-Type': 'application/json'
@@ -1909,7 +2013,7 @@
             }
             
             try {
-                const response = await fetch(`${apiUrl}/v1/models`, {
+                const response = await smartFetch(apiUrl, 'models', {
                     headers: { 'Authorization': `Bearer ${config.apiKey}` }
                 });
                 
@@ -1939,7 +2043,7 @@
                 console.log('🔄 刷新模型列表...');
                 console.log('📡 API URL:', config.apiUrl);
                 
-                const response = await fetch(`${config.apiUrl}/v1/models`, {
+                const response = await smartFetch(config.apiUrl, 'models', {
                     headers: { 
                         'Authorization': `Bearer ${config.apiKey}`,
                         'Content-Type': 'application/json'
@@ -2028,7 +2132,7 @@
             const badge = document.getElementById('statusBadge');
             
             try {
-                const response = await fetch(`${config.apiUrl}/v1/models`, {
+                const response = await smartFetch(config.apiUrl, 'models', {
                     headers: { 'Authorization': `Bearer ${config.apiKey}` }
                 });
                 

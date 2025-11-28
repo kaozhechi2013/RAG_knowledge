@@ -294,8 +294,21 @@ router.post("/completions", async (req: Request, res: Response) => {
 		}
 
 		// Create OpenAI client
+		// OpenAI SDK v5+ 不会自动添加 /v1 前缀，需要手动处理
+		let baseURL = provider.apiHost;
+		if (!baseURL.includes("/v1")) {
+			baseURL = baseURL.endsWith("/") ? `${baseURL}v1` : `${baseURL}/v1`;
+		}
+
+		logger.info("Creating OpenAI client:", {
+			originalHost: provider.apiHost,
+			baseURL: baseURL,
+			hasApiKey: !!provider.apiKey,
+			modelId: modelId,
+		});
+
 		const client = new OpenAI({
-			baseURL: provider.apiHost,
+			baseURL: baseURL,
 			apiKey: provider.apiKey,
 		});
 		request.model = modelId;
@@ -495,7 +508,13 @@ router.post("/completions", async (req: Request, res: Response) => {
 
 		return res.json(response);
 	} catch (error: any) {
-		logger.error("Chat completion error:", error);
+		logger.error("Chat completion error:", {
+			message: error?.message,
+			name: error?.name,
+			stack: error?.stack,
+			status: error?.status,
+			code: error?.code,
+		});
 
 		let statusCode = 500;
 		let errorType = "server_error";
