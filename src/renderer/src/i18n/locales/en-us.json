@@ -1043,6 +1043,7 @@
 		"dimensions_size_tooltip": "Embedding dimension size, the larger the value, the more tokens will be consumed. Leave empty to not pass dimensions parameter.",
 		"directories": "Directories",
 		"directory_placeholder": "Enter Directory Path",
+		"doc_format_not_supported": ".doc format is not supported ({{files}}). Please convert to .docx format and re-import",
 		"document_count": "Requested Document Chunks",
 		"document_count_default": "Default",
 		"document_count_help": "The more document chunks requested, the more information is included, but the more tokens are consumed",

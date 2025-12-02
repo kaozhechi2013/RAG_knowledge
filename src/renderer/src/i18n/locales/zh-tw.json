@@ -1040,6 +1040,7 @@
     "dimensions_size_tooltip": "嵌入維度大小，數值越大消耗的 Token 也越多。留空則不傳遞 dimensions 參數。",
     "directories": "目錄",
     "directory_placeholder": "請輸入目錄路徑",
+    "doc_format_not_supported": "不支援 .doc 格式檔案（{{files}}），請轉換為 .docx 格式後重新匯入",
     "document_count": "請求文件片段數量",
     "document_count_default": "預設",
     "document_count_help": "請求文件片段數量越多，附帶的資訊越多，但需要消耗的 Token 也越多",

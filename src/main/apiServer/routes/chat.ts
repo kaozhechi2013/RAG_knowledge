@@ -293,19 +293,19 @@ router.post("/completions", async (req: Request, res: Response) => {
 			logger.info("⏭️ Skipping knowledge base search (conditions not met)");
 		}
 
-	// Create OpenAI client
-	// Ensure baseURL has /v1 suffix for OpenAI-compatible APIs
-	let baseURL = provider.apiHost || "";
-	baseURL = baseURL.replace(/\/+$/, ""); // Remove trailing slash
-	if (baseURL && !baseURL.endsWith("/v1")) {
-		baseURL = `${baseURL}/v1`;
-	}
-	
-	const client = new OpenAI({
-		baseURL,
-		apiKey: provider.apiKey,
-	});
-	request.model = modelId;		// Handle streaming
+		// Create OpenAI client
+		// Ensure baseURL has /v1 suffix for OpenAI-compatible APIs
+		let baseURL = provider.apiHost || "";
+		baseURL = baseURL.replace(/\/+$/, ""); // Remove trailing slash
+		if (baseURL && !baseURL.endsWith("/v1")) {
+			baseURL = `${baseURL}/v1`;
+		}
+
+		const client = new OpenAI({
+			baseURL,
+			apiKey: provider.apiKey,
+		});
+		request.model = modelId; // Handle streaming
 		if (request.stream) {
 			const streamResponse = await client.chat.completions.create(request);
 

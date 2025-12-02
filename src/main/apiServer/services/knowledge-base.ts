@@ -88,15 +88,15 @@ export class KnowledgeBaseService {
 			let baseURL = provider.apiHost || "";
 			// Remove trailing slash to avoid double slashes
 			baseURL = baseURL.replace(/\/+$/, "");
-			
+
 			// Add /v1 if not already present
 			if (baseURL && !baseURL.endsWith("/v1")) {
 				baseURL = `${baseURL}/v1`;
 			}
 
-			logger.info(`Using baseURL for embedding:`, { 
+			logger.info(`Using baseURL for embedding:`, {
 				original: provider.apiHost,
-				processed: baseURL 
+				processed: baseURL,
 			});
 
 			return {
